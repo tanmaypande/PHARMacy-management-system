@@ -1,30 +1,40 @@
-# Environments
+# Environment variables (Never commit real credentials)
 .env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
+.env.*
+!.env.example
 
-# Python
+# Virtual Environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python cache & bytecode
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 
-# Distribution / packaging
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs
+*.log
+
+# Distribution & Packaging
 build/
 dist/
 *.egg-info/
-
-# PyInstaller
 *.spec
 
-# Database
-*.sqlite3
-
-# IDEs
-.idea/
+# IDE & Editor artifacts
 .vscode/
+.idea/
 *.swp
+*.swo
+
+# OS artifacts
+Thumbs.db
+Desktop.ini

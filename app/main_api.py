@@ -1,17 +1,39 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, status
+from fastapi.responses import JSONResponse
+from app.core.config import settings
+from app.core.database import check_database_health
 
 app = FastAPI(
     title="Pharmacy Management System API",
-    description="Backend API for the TQM-focused Pharmacy System",
+    description="Backend API with TQM Error Prevention and Q12 Accessibility Standards",
     version="1.0.0"
 )
 
-@app.get("/health")
+@app.get("/health", tags=["Health & Monitoring"])
 def health_check():
-    """Basic health check endpoint to verify the API is running."""
-    return {"status": "ok", "message": "Pharmacy API is running"}
+    """
+    Comprehensive system health check.
+    Verifies that the API service is responsive and tests the live connection to PostgreSQL.
+    """
+    db_status = check_database_health()
+    is_healthy = db_status.get("database_connected", False)
+    
+    response_payload = {
+        "status": "healthy" if is_healthy else "degraded",
+        "api_service": "running",
+        "environment": settings.ENVIRONMENT,
+        "database": db_status
+    }
+    
+    # Return 200 OK if healthy, 503 Service Unavailable if database is unreachable
+    http_status = status.HTTP_200_OK if is_healthy else status.HTTP_503_SERVICE_UNAVAILABLE
+    return JSONResponse(status_code=http_status, content=response_payload)
 
 if __name__ == "__main__":
     import uvicorn
-    # Run the server locally on port 8000
-    uvicorn.run("app.main_api:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run(
+        "app.main_api:app",
+        host=settings.API_HOST,
+        port=settings.API_PORT,
+        reload=True
+    )
