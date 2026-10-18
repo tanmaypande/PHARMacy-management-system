@@ -13,6 +13,7 @@ sys.path.insert(0, os.path.realpath(os.path.join(os.path.dirname(__file__), ".."
 # Import project settings and Base metadata
 from app.core.config import settings
 from app.core.database import Base
+import app.models  # Ensures all models are registered on Base.metadata for autogenerate
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
