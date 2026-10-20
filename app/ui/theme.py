@@ -2,6 +2,8 @@
 Design System and Theme Tokens for MediCare Pharmacy Management System.
 Tailored for a polished, modern Healthcare SaaS aesthetic with full CustomTkinter light/dark support.
 """
+from typing import Tuple
+
 
 class Theme:
     # Surface & Backgrounds (Light mode, Dark mode)
@@ -11,6 +13,8 @@ class Theme:
     BG_CARD_HOVER = ("#F8FAFC", "#273549")     # Card Hover
     BG_INPUT = ("#FFFFFF", "#0F172A")          # Input Box Surface
     BG_MUTED = ("#F1F5F9", "#243248")          # Slate-100 / Slate-750
+    BG_ROW_ALT = ("#FAFAFA", "#182234")        # Alternating table rows
+    BG_ROW_HOVER = ("#EFF6FF", "#283548")      # Table row hover
 
     # Borders & Dividers
     BORDER = ("#E2E8F0", "#334155")            # Slate-200 / Slate-700
@@ -52,3 +56,9 @@ class Theme:
     HC_TEXT = "#FFFFFF"
     HC_ACCENT = "#FACC15"                      # High-visibility yellow
     HC_BORDER = "#FACC15"
+
+    # Shape & Geometry Tokens
+    RADIUS_CARD = 12
+    RADIUS_BUTTON = 8
+    RADIUS_INPUT = 8
+    RADIUS_BADGE = 6
