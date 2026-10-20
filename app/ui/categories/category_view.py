@@ -1,18 +1,25 @@
 import threading
 import customtkinter as ctk
 from app.client.api_client import APIClient
+from app.ui.theme import Theme
 from app.ui.accessibility.accessibility_manager import accessibility_manager
+from app.ui.components.badge import StatusBadge
+from app.ui.components.empty_state import EmptyState
+from app.ui.components.dialogs import ConfirmDialog
 
 
 class CategoryModal(ctk.CTkToplevel):
+    """
+    Polished modal dialog for creating or updating drug categories.
+    """
     def __init__(self, master, api_client: APIClient, category=None, on_success=None):
         super().__init__(master)
         self.api_client = api_client
         self.category = category
         self.on_success = on_success
 
-        self.title("Edit Category" if category else "Add New Category")
-        self.geometry("440x320")
+        self.title("Edit Category" if category else "Add Drug Category")
+        self.geometry("460x340")
         self.resizable(False, False)
         self.grab_set()
 
@@ -20,40 +27,50 @@ class CategoryModal(ctk.CTkToplevel):
 
     def _build_form(self):
         container = ctk.CTkFrame(self, fg_color="transparent")
-        container.pack(fill="both", expand=True, padx=25, pady=20)
+        container.pack(fill="both", expand=True, padx=28, pady=22)
 
-        title_text = "Edit Drug Category" if self.category else "Create Drug Category"
+        title_text = "Edit Category Details" if self.category else "Register New Drug Category"
         ctk.CTkLabel(
             container,
             text=title_text,
-            font=accessibility_manager.get_font(18, weight="bold")
-        ).pack(anchor="w", pady=(0, 15))
+            font=accessibility_manager.get_font(18, weight="bold"),
+            text_color=Theme.TEXT_MAIN
+        ).pack(anchor="w", pady=(0, 4))
 
-        # Name Field
-        ctk.CTkLabel(container, text="Category Name *", font=accessibility_manager.get_font(13)).pack(anchor="w")
+        ctk.CTkLabel(
+            container,
+            text="Groups medicines for therapeutic classification and inventory analytics",
+            font=accessibility_manager.get_font(12),
+            text_color=Theme.TEXT_MUTED
+        ).pack(anchor="w", pady=(0, 16))
+
+        # Category Name
+        ctk.CTkLabel(container, text="Category Name *", font=accessibility_manager.get_font(13, weight="bold"), text_color=Theme.TEXT_MAIN).pack(anchor="w")
         self.entry_name = ctk.CTkEntry(
             container,
             placeholder_text="e.g. Analgesics, Antibiotics, Antipyretics",
-            height=36,
+            height=38,
+            border_color=Theme.BORDER,
             font=accessibility_manager.get_font(13)
         )
         self.entry_name.pack(fill="x", pady=(3, 12))
         if self.category:
             self.entry_name.insert(0, self.category.get("name", ""))
 
-        # Description Field
-        ctk.CTkLabel(container, text="Description (Optional)", font=accessibility_manager.get_font(13)).pack(anchor="w")
+        # Description
+        ctk.CTkLabel(container, text="Therapeutic Description (Optional)", font=accessibility_manager.get_font(13), text_color=Theme.TEXT_MAIN).pack(anchor="w")
         self.entry_desc = ctk.CTkEntry(
             container,
-            placeholder_text="Clinical notes or therapeutic class",
-            height=36,
+            placeholder_text="Clinical indications or pharmacologic class notes",
+            height=38,
+            border_color=Theme.BORDER,
             font=accessibility_manager.get_font(13)
         )
-        self.entry_desc.pack(fill="x", pady=(3, 15))
+        self.entry_desc.pack(fill="x", pady=(3, 16))
         if self.category and self.category.get("description"):
             self.entry_desc.insert(0, self.category.get("description", ""))
 
-        self.lbl_error = ctk.CTkLabel(container, text="", text_color="#EF4444", font=accessibility_manager.get_font(12))
+        self.lbl_error = ctk.CTkLabel(container, text="", text_color=Theme.DANGER_TEXT, font=accessibility_manager.get_font(12))
         self.lbl_error.pack(anchor="w", pady=(0, 10))
 
         # Buttons
@@ -63,7 +80,9 @@ class CategoryModal(ctk.CTkToplevel):
         self.btn_save = ctk.CTkButton(
             btn_frame,
             text="Save Category",
-            height=38,
+            height=40,
+            fg_color=Theme.PRIMARY,
+            hover_color=Theme.PRIMARY_HOVER,
             command=self._save,
             font=accessibility_manager.get_font(13, weight="bold")
         )
@@ -72,8 +91,10 @@ class CategoryModal(ctk.CTkToplevel):
         ctk.CTkButton(
             btn_frame,
             text="Cancel",
-            height=38,
-            fg_color="#64748B",
+            height=40,
+            fg_color=Theme.SECONDARY,
+            hover_color=Theme.SECONDARY_HOVER,
+            text_color=Theme.SECONDARY_TEXT,
             command=self.destroy,
             font=accessibility_manager.get_font(13)
         ).pack(side="right", padx=(10, 0))
@@ -107,7 +128,8 @@ class CategoryModal(ctk.CTkToplevel):
 
     def _on_err(self, msg: str):
         self.btn_save.configure(state="normal", text="Save Category")
-        self.lbl_error.configure(text=msg.replace("RuntimeError: ", ""))
+        clean_msg = msg.replace("RuntimeError: ", "")
+        self.lbl_error.configure(text=clean_msg)
 
 
 class CategoryView(ctk.CTkFrame):
@@ -118,47 +140,69 @@ class CategoryView(ctk.CTkFrame):
         self.load_categories()
 
     def _build_ui(self):
-        header = ctk.CTkFrame(self, fg_color="transparent")
-        header.pack(fill="x", padx=20, pady=(15, 10))
+        # Action Toolbar
+        toolbar = ctk.CTkFrame(self, fg_color="transparent")
+        toolbar.pack(fill="x", padx=20, pady=(15, 10))
+
+        title_box = ctk.CTkFrame(toolbar, fg_color="transparent")
+        title_box.pack(side="left")
 
         ctk.CTkLabel(
-            header,
-            text="🗂 Drug Category Management",
-            font=accessibility_manager.get_font(20, weight="bold")
-        ).pack(side="left")
+            title_box,
+            text="🗂 Drug Classification & Categories",
+            font=accessibility_manager.get_font(20, weight="bold"),
+            text_color=Theme.TEXT_MAIN
+        ).pack(anchor="w")
 
-        btn_row = ctk.CTkFrame(header, fg_color="transparent")
+        self.count_badge = ctk.CTkLabel(
+            title_box,
+            text="Loading categories...",
+            font=accessibility_manager.get_font(12),
+            text_color=Theme.TEXT_MUTED
+        )
+        self.count_badge.pack(anchor="w")
+
+        btn_row = ctk.CTkFrame(toolbar, fg_color="transparent")
         btn_row.pack(side="right")
 
         ctk.CTkButton(
             btn_row,
             text="🔄 Refresh",
-            width=90,
+            width=95,
+            height=36,
+            fg_color=Theme.SECONDARY,
+            hover_color=Theme.SECONDARY_HOVER,
+            text_color=Theme.SECONDARY_TEXT,
             command=self.load_categories,
-            font=accessibility_manager.get_font(13)
+            font=accessibility_manager.get_font(12, weight="bold")
         ).pack(side="left", padx=5)
 
         ctk.CTkButton(
             btn_row,
-            text="➕ Add Category",
-            width=130,
-            fg_color="#10B981",
-            hover_color="#059669",
+            text="➕ New Category",
+            width=140,
+            height=36,
+            fg_color=Theme.PRIMARY,
+            hover_color=Theme.PRIMARY_HOVER,
             command=self._open_add_modal,
             font=accessibility_manager.get_font(13, weight="bold")
         ).pack(side="left", padx=5)
 
-        # Status text
-        self.status_lbl = ctk.CTkLabel(self, text="Loading categories...", font=accessibility_manager.get_font(13), text_color="#94A3B8")
-        self.status_lbl.pack(anchor="w", padx=20, pady=(0, 5))
+        # Table Container
+        self.table_card = ctk.CTkFrame(self, fg_color=Theme.BG_CARD, corner_radius=12, border_width=1, border_color=Theme.BORDER)
+        self.table_card.pack(fill="both", expand=True, padx=20, pady=(5, 20))
 
-        # Scrollable table container
-        self.table_scroll = ctk.CTkScrollableFrame(
-            self,
-            fg_color=accessibility_manager.get_card_fg(),
-            corner_radius=10
-        )
-        self.table_scroll.pack(fill="both", expand=True, padx=20, pady=(5, 20))
+        # Table Header
+        self.hdr = ctk.CTkFrame(self.table_card, fg_color=Theme.BG_MUTED, height=40, corner_radius=8)
+        self.hdr.pack(fill="x", padx=10, pady=(10, 5))
+        ctk.CTkLabel(self.hdr, text="CATEGORY NAME", width=220, anchor="w", font=accessibility_manager.get_font(11, weight="bold"), text_color=Theme.TEXT_MUTED).pack(side="left", padx=12)
+        ctk.CTkLabel(self.hdr, text="THERAPEUTIC DESCRIPTION", width=340, anchor="w", font=accessibility_manager.get_font(11, weight="bold"), text_color=Theme.TEXT_MUTED).pack(side="left", padx=12)
+        ctk.CTkLabel(self.hdr, text="MEDICINES LINKED", width=120, anchor="center", font=accessibility_manager.get_font(11, weight="bold"), text_color=Theme.TEXT_MUTED).pack(side="left", padx=12)
+        ctk.CTkLabel(self.hdr, text="ACTIONS", width=140, anchor="center", font=accessibility_manager.get_font(11, weight="bold"), text_color=Theme.TEXT_MUTED).pack(side="left", padx=12)
+
+        # Scrollable rows area
+        self.table_scroll = ctk.CTkScrollableFrame(self.table_card, fg_color="transparent")
+        self.table_scroll.pack(fill="both", expand=True, padx=10, pady=(0, 10))
 
     def _open_add_modal(self):
         CategoryModal(self, self.api_client, on_success=self.load_categories)
@@ -167,7 +211,7 @@ class CategoryView(ctk.CTkFrame):
         CategoryModal(self, self.api_client, category=category, on_success=self.load_categories)
 
     def load_categories(self):
-        self.status_lbl.configure(text="⏳ Fetching categories from backend...", text_color="#FBBF24")
+        self.count_badge.configure(text="⏳ Querying database via FastAPI...")
 
         def _fetch():
             try:
@@ -179,74 +223,108 @@ class CategoryView(ctk.CTkFrame):
         threading.Thread(target=_fetch, daemon=True).start()
 
     def _render_categories(self, categories):
-        # Clear existing
         for widget in self.table_scroll.winfo_children():
             widget.destroy()
 
-        self.status_lbl.configure(text=f"Showing {len(categories)} categories", text_color="#34D399")
+        total = len(categories)
+        self.count_badge.configure(text=f"Total: {total} registered classifications in catalog")
 
         if not categories:
-            ctk.CTkLabel(
+            EmptyState(
                 self.table_scroll,
-                text="No drug categories found. Click '➕ Add Category' to create the first one.",
-                font=accessibility_manager.get_font(14)
-            ).pack(pady=40)
+                icon="🗂",
+                title="No Drug Categories Registered",
+                description="Create therapeutic categories to organize medications and manage stock.",
+                action_text="➕ Register First Category",
+                action_command=self._open_add_modal
+            ).pack(fill="both", expand=True, pady=30)
             return
 
-        # Header Row
-        hdr = ctk.CTkFrame(self.table_scroll, fg_color="#334155", height=36)
-        hdr.pack(fill="x", padx=5, pady=5)
-        ctk.CTkLabel(hdr, text="Category Name", width=180, anchor="w", font=accessibility_manager.get_font(13, weight="bold")).pack(side="left", padx=10)
-        ctk.CTkLabel(hdr, text="Description", width=260, anchor="w", font=accessibility_manager.get_font(13, weight="bold")).pack(side="left", padx=10)
-        ctk.CTkLabel(hdr, text="Medicines", width=80, anchor="center", font=accessibility_manager.get_font(13, weight="bold")).pack(side="left", padx=10)
-        ctk.CTkLabel(hdr, text="Actions", width=140, anchor="center", font=accessibility_manager.get_font(13, weight="bold")).pack(side="left", padx=10)
+        for idx, cat in enumerate(categories):
+            # Alternating row background for enhanced legibility
+            row_bg = "transparent" if idx % 2 == 0 else Theme.BG_MUTED
+            row = ctk.CTkFrame(self.table_scroll, fg_color=row_bg, corner_radius=6, height=42)
+            row.pack(fill="x", pady=2)
 
-        for cat in categories:
-            row = ctk.CTkFrame(self.table_scroll, fg_color="transparent")
-            row.pack(fill="x", padx=5, pady=4)
+            # Name with brand indicator
+            ctk.CTkLabel(
+                row,
+                text=cat["name"],
+                width=220,
+                anchor="w",
+                font=accessibility_manager.get_font(13, weight="bold"),
+                text_color=Theme.TEXT_MAIN
+            ).pack(side="left", padx=12)
 
-            ctk.CTkLabel(row, text=cat["name"], width=180, anchor="w", font=accessibility_manager.get_font(13, weight="bold")).pack(side="left", padx=10)
-            ctk.CTkLabel(row, text=cat.get("description") or "—", width=260, anchor="w", font=accessibility_manager.get_font(13), text_color="#94A3B8").pack(side="left", padx=10)
-            
-            # Badge count
+            # Description
+            ctk.CTkLabel(
+                row,
+                text=cat.get("description") or "—",
+                width=340,
+                anchor="w",
+                font=accessibility_manager.get_font(12),
+                text_color=Theme.TEXT_MUTED
+            ).pack(side="left", padx=12)
+
+            # Linked medicines count badge
             m_count = cat.get("medicine_count", 0)
-            count_lbl = ctk.CTkLabel(row, text=str(m_count), width=80, anchor="center", font=accessibility_manager.get_font(13))
-            count_lbl.pack(side="left", padx=10)
+            count_box = ctk.CTkFrame(row, fg_color="transparent", width=120)
+            count_box.pack(side="left", padx=12)
+            StatusBadge(count_box, text=f"{m_count} Items", variant="info" if m_count > 0 else "neutral").pack(expand=True)
 
+            # Actions
             act_frame = ctk.CTkFrame(row, fg_color="transparent", width=140)
-            act_frame.pack(side="left", padx=10)
+            act_frame.pack(side="left", padx=12)
 
             ctk.CTkButton(
                 act_frame,
                 text="✏️ Edit",
                 width=60,
                 height=28,
+                fg_color=Theme.SECONDARY,
+                hover_color=Theme.SECONDARY_HOVER,
+                text_color=Theme.SECONDARY_TEXT,
                 command=lambda c=cat: self._open_edit_modal(c),
-                font=accessibility_manager.get_font(11)
+                font=accessibility_manager.get_font(11, weight="bold")
             ).pack(side="left", padx=3)
 
             ctk.CTkButton(
                 act_frame,
-                text="🗑️ Delete",
-                width=60,
+                text="🗑️",
+                width=35,
                 height=28,
-                fg_color="#EF4444",
-                hover_color="#DC2626",
-                command=lambda c=cat: self._delete_category(c),
+                fg_color="#FEE2E2",
+                hover_color="#FCA5A5",
+                text_color="#B91C1C",
+                command=lambda c=cat: self._confirm_delete(c),
                 font=accessibility_manager.get_font(11)
             ).pack(side="left", padx=3)
 
-    def _delete_category(self, cat):
+    def _confirm_delete(self, cat):
         if cat.get("medicine_count", 0) > 0:
-            self.status_lbl.configure(
-                text=f"❌ Cannot delete '{cat['name']}': Contains {cat['medicine_count']} active medicines.",
-                text_color="#EF4444"
+            ConfirmDialog(
+                self,
+                title="Cannot Delete Category",
+                message=f"Category '{cat['name']}' currently contains {cat['medicine_count']} active medicine(s).\n\n"
+                        f"TQM Integrity Safeguard: Reassign or delete linked medicines first before deleting this category.",
+                confirm_text="Understood",
+                is_destructive=False
             )
             return
 
+        ConfirmDialog(
+            self,
+            title="Delete Category",
+            message=f"Are you sure you want to permanently delete category '{cat['name']}'?",
+            confirm_text="Delete Category",
+            is_destructive=True,
+            on_confirm=lambda: self._execute_delete(cat["id"])
+        )
+
+    def _execute_delete(self, cat_id):
         def _do():
             try:
-                self.api_client.delete_category(cat["id"])
+                self.api_client.delete_category(cat_id)
                 self.after(0, self.load_categories)
             except Exception as e:
                 self.after(0, self._render_error, str(e))
@@ -254,4 +332,4 @@ class CategoryView(ctk.CTkFrame):
         threading.Thread(target=_do, daemon=True).start()
 
     def _render_error(self, err_msg):
-        self.status_lbl.configure(text=f"Error: {err_msg}", text_color="#EF4444")
+        self.count_badge.configure(text=f"Error: {err_msg}", text_color=Theme.DANGER_TEXT)

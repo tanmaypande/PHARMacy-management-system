@@ -10,7 +10,7 @@ class AccessibilityManager:
     """
     Singleton Manager for TQM Q12 Accessibility Standards.
     Manages:
-    - High contrast, dark mode, light mode
+    - Default Light mode with Dark mode and High-Contrast options
     - Dynamic font scaling across all UI elements
     - Focus indicators and readable color palettes
     - Persistent local configuration
@@ -26,7 +26,7 @@ class AccessibilityManager:
     def _init_manager(self):
         self.listeners: List[Callable[[], None]] = []
         self.config: Dict[str, Any] = {
-            "appearance_mode": "dark",      # dark, light, high-contrast
+            "appearance_mode": "light",     # light by default, dark, high-contrast
             "font_scale": 1.0,              # 1.0 (normal), 1.15 (large), 1.3 (extra large)
             "high_contrast": False,
             "large_buttons": True
@@ -51,12 +51,13 @@ class AccessibilityManager:
             pass
 
     def _apply_ctk_mode(self):
-        mode = self.config.get("appearance_mode", "dark")
+        mode = self.config.get("appearance_mode", "light")
         if mode == "high-contrast":
             ctk.set_appearance_mode("dark")
             ctk.set_default_color_theme("blue")
         else:
             ctk.set_appearance_mode(mode)
+            ctk.set_default_color_theme("blue")
 
     def set_appearance_mode(self, mode: str):
         self.config["appearance_mode"] = mode
@@ -64,6 +65,11 @@ class AccessibilityManager:
         self._apply_ctk_mode()
         self.save_config()
         self.notify_listeners()
+
+    def toggle_mode(self):
+        current = self.config.get("appearance_mode", "light")
+        new_mode = "dark" if current == "light" else "light"
+        self.set_appearance_mode(new_mode)
 
     def set_font_scale(self, scale: float):
         self.config["font_scale"] = round(scale, 2)
@@ -75,17 +81,17 @@ class AccessibilityManager:
         return int(base_size * scale)
 
     def get_font(self, base_size: int = 14, weight: str = "normal", slant: str = "roman") -> ctk.CTkFont:
-        return ctk.CTkFont(size=self.get_font_size(base_size), weight=weight, slant=slant)
+        return ctk.CTkFont(family="Segoe UI", size=self.get_font_size(base_size), weight=weight, slant=slant)
 
-    def get_card_fg(self) -> str:
+    def get_card_fg(self):
         if self.config.get("appearance_mode") == "high-contrast":
             return "#0A0A0A"
-        return "#1E293B" if self.config.get("appearance_mode") == "dark" else "#F1F5F9"
+        return ("#FFFFFF", "#1E293B")
 
-    def get_accent_color(self) -> str:
+    def get_accent_color(self):
         if self.config.get("appearance_mode") == "high-contrast":
-            return "#FACC15"  # High visibility yellow
-        return "#3B82F6"      # Standard blue
+            return "#FACC15"
+        return ("#2563EB", "#3B82F6")
 
     def subscribe(self, callback: Callable[[], None]):
         if callback not in self.listeners:

@@ -1,6 +1,6 @@
 {
-  "appearance_mode": "high-contrast",
-  "font_scale": 1.2,
-  "high_contrast": true,
+  "appearance_mode": "light",
+  "font_scale": 1.0,
+  "high_contrast": false,
   "large_buttons": true
 }
