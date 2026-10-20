@@ -15,6 +15,7 @@ import customtkinter as ctk
 from app.client.api_client import APIClient
 from app.ui.theme import Theme
 from app.ui.accessibility.accessibility_manager import accessibility_manager
+from app.ui.common.async_task import init_async, run_in_background, _gui_queue
 from app.ui.components.header import TopHeader
 from app.ui.dashboard.dashboard_view import DashboardView
 from app.ui.categories.category_view import CategoryView
@@ -58,6 +59,9 @@ class MainWindow(ctk.CTk):
         # Subscribe to accessibility updates
         accessibility_manager.subscribe(self._on_accessibility_change)
 
+        # Initialize thread-safe async queue pump
+        init_async(self)
+
         self._build_layout()
         self._bind_keyboard_shortcuts()
         self.navigate("dashboard")
@@ -74,7 +78,8 @@ class MainWindow(ctk.CTk):
             width=240,
             corner_radius=0,
             fg_color=Theme.BG_SIDEBAR,
-            border_width=0
+            border_width=1,
+            border_color=Theme.BORDER
         )
         self.sidebar.grid(row=0, column=0, sticky="nsew")
         self.sidebar.grid_propagate(False)
@@ -86,35 +91,63 @@ class MainWindow(ctk.CTk):
         self.logo_row = ctk.CTkFrame(self.brand_frame, fg_color="transparent")
         self.logo_row.pack(anchor="w")
 
+        # Teal logo badge
+        logo_badge = ctk.CTkFrame(self.logo_row, fg_color=Theme.PRIMARY, width=36, height=36, corner_radius=8)
+        logo_badge.pack(side="left", padx=(0, 10))
+        logo_badge.pack_propagate(False)
+
         self.lbl_logo_icon = ctk.CTkLabel(
-            self.logo_row,
+            logo_badge,
             text="🏥",
-            font=ctk.CTkFont(size=22)
+            font=ctk.CTkFont(size=18)
         )
-        self.lbl_logo_icon.pack(side="left", padx=(4, 8))
+        self.lbl_logo_icon.pack(expand=True)
+
+        logo_titles = ctk.CTkFrame(self.logo_row, fg_color="transparent")
+        logo_titles.pack(side="left")
 
         self.lbl_logo_text = ctk.CTkLabel(
-            self.logo_row,
+            logo_titles,
             text="MediCare PMS",
-            font=accessibility_manager.get_font(17, weight="bold"),
-            text_color="#F8FAFC"
+            font=accessibility_manager.get_font(16, weight="bold"),
+            text_color=Theme.TEXT_MAIN
         )
-        self.lbl_logo_text.pack(side="left")
+        self.lbl_logo_text.pack(anchor="w")
 
         self.lbl_logo_sub = ctk.CTkLabel(
-            self.brand_frame,
+            logo_titles,
             text="Clinical SaaS • TQM Q12",
             font=accessibility_manager.get_font(10),
-            text_color="#64748B"
+            text_color=Theme.TEXT_MUTED
         )
-        self.lbl_logo_sub.pack(anchor="w", padx=(34, 0), pady=(1, 0))
+        self.lbl_logo_sub.pack(anchor="w")
 
-        self.brand_sep = ctk.CTkFrame(self.sidebar, fg_color="#1E293B", height=1)
+        self.brand_sep = ctk.CTkFrame(self.sidebar, fg_color=Theme.BORDER, height=1)
         self.brand_sep.pack(fill="x", padx=14, pady=(8, 10))
 
-        # Scrollable Nav Buttons
+        # Bottom Sidebar Connection Pill packed first at bottom so it never clips
+        self.bot_frame = ctk.CTkFrame(self.sidebar, fg_color=Theme.BG_MUTED, corner_radius=10)
+        self.bot_frame.pack(side="bottom", fill="x", padx=12, pady=12)
+
+        self.lbl_sidebar_status = ctk.CTkLabel(
+            self.bot_frame,
+            text="⏳ Checking API...",
+            font=accessibility_manager.get_font(11, weight="bold"),
+            text_color=Theme.SUCCESS_TEXT
+        )
+        self.lbl_sidebar_status.pack(anchor="w", padx=10, pady=(6, 1))
+
+        self.lbl_sidebar_db = ctk.CTkLabel(
+            self.bot_frame,
+            text="PostgreSQL 18 • Port 5432",
+            font=accessibility_manager.get_font(10),
+            text_color=Theme.TEXT_MUTED
+        )
+        self.lbl_sidebar_db.pack(anchor="w", padx=10, pady=(0, 6))
+
+        # Scrollable Nav Buttons in the middle
         self.nav_scroll = ctk.CTkScrollableFrame(self.sidebar, fg_color="transparent")
-        self.nav_scroll.pack(fill="both", expand=True, padx=6, pady=0)
+        self.nav_scroll.pack(side="top", fill="both", expand=True, padx=6, pady=0)
 
         self.nav_buttons = {}
         self.section_headers = []
@@ -124,7 +157,7 @@ class MainWindow(ctk.CTk):
                 self.nav_scroll,
                 text=label,
                 font=accessibility_manager.get_font(9, weight="bold"),
-                text_color="#475569"
+                text_color=Theme.TEXT_MUTED
             )
             hdr.pack(anchor="w", padx=12, pady=(8, 2))
             self.section_headers.append(hdr)
@@ -140,26 +173,6 @@ class MainWindow(ctk.CTk):
         _add_section("QUALITY & SYSTEM")
         for key, icon, label, _, _ in self.nav_items[8:]:
             self._create_nav_button(key, icon, label)
-
-        # Bottom Sidebar Connection Pill
-        self.bot_frame = ctk.CTkFrame(self.sidebar, fg_color="#1E293B", corner_radius=10)
-        self.bot_frame.pack(fill="x", padx=12, pady=12)
-
-        self.lbl_sidebar_status = ctk.CTkLabel(
-            self.bot_frame,
-            text="⏳ Checking API...",
-            font=accessibility_manager.get_font(11, weight="bold"),
-            text_color="#FBBF24"
-        )
-        self.lbl_sidebar_status.pack(anchor="w", padx=10, pady=(6, 1))
-
-        self.lbl_sidebar_db = ctk.CTkLabel(
-            self.bot_frame,
-            text="PostgreSQL 18 • Port 5432",
-            font=accessibility_manager.get_font(10),
-            text_color="#94A3B8"
-        )
-        self.lbl_sidebar_db.pack(anchor="w", padx=10, pady=(0, 6))
 
         # ================= 2. Main Right Container =================
         self.right_container = ctk.CTkFrame(self, fg_color="transparent", corner_radius=0)
@@ -189,12 +202,12 @@ class MainWindow(ctk.CTk):
         btn = ctk.CTkButton(
             self.nav_scroll,
             text=f"  {icon}   {label}",
-            height=36,
-            corner_radius=Theme.RADIUS_BUTTON,
+            height=38,
+            corner_radius=10,
             anchor="w",
             fg_color="transparent",
-            text_color="#94A3B8",
-            hover_color="#1E293B",
+            text_color=Theme.TEXT_MUTED,
+            hover_color=Theme.SECONDARY_HOVER,
             font=accessibility_manager.get_font(12),
             command=lambda k=key: self.navigate(k)
         )
@@ -271,7 +284,7 @@ class MainWindow(ctk.CTk):
             else:
                 btn.configure(
                     fg_color="transparent",
-                    text_color="#94A3B8"
+                    text_color=Theme.TEXT_MUTED
                 )
 
         # Destroy old view
@@ -467,17 +480,11 @@ class MainWindow(ctk.CTk):
 
                     if not self._monitor_running:
                         break
-                    try:
-                        self.after(0, self._render_health, health, alerts_list)
-                    except Exception:
-                        pass
+                    _gui_queue.put((self._render_health, (health, alerts_list), {}))
                 except Exception:
                     if not self._monitor_running:
                         break
-                    try:
-                        self.after(0, self._render_health, {}, [])
-                    except Exception:
-                        pass
+                    _gui_queue.put((self._render_health, ({}, []), {}))
                 time.sleep(10)
 
         threading.Thread(target=_loop, daemon=True).start()

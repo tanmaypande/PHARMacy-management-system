@@ -8,6 +8,7 @@ import customtkinter as ctk
 from app.client.api_client import APIClient
 from app.ui.theme import Theme
 from app.ui.accessibility.accessibility_manager import accessibility_manager
+from app.ui.common.async_task import run_in_background
 from app.ui.components.badge import StatusBadge
 from app.ui.components.dialogs import ConfirmDialog
 from app.ui.components.data_table import DataTable
@@ -115,16 +116,12 @@ class CategoryModal(ctk.CTkToplevel):
         self.lbl_error.configure(text="")
 
         def _do():
-            try:
-                if self.category:
-                    self.api_client.update_category(self.category["id"], name, desc or None)
-                else:
-                    self.api_client.create_category(name, desc or None)
-                self.after(0, self._on_done)
-            except Exception as e:
-                self.after(0, self._on_err, str(e))
+            if self.category:
+                return self.api_client.update_category(self.category["id"], name, desc or None)
+            else:
+                return self.api_client.create_category(name, desc or None)
 
-        threading.Thread(target=_do, daemon=True).start()
+        run_in_background(_do, on_success=lambda _: self._on_done(), on_error=self._on_err)
 
     def _on_done(self):
         if self.on_success:
@@ -264,15 +261,15 @@ class CategoryView(ctk.CTkFrame):
         )
 
     def _execute_delete(self, cat_id: str):
-        def _do():
-            try:
-                self.api_client.delete_category(cat_id)
-                self.after(0, self.load_categories)
-            except Exception as e:
-                clean_err = str(e).replace("RuntimeError: API Error (400): ", "")
-                self.after(0, lambda: self.lbl_count.configure(text=f"⚠️ {clean_err}", text_color=Theme.DANGER_TEXT))
+        def _err(e):
+            clean_err = str(e).replace("RuntimeError: API Error (400): ", "")
+            self.lbl_count.configure(text=f"⚠️ {clean_err}", text_color=Theme.DANGER_TEXT)
 
-        threading.Thread(target=_do, daemon=True).start()
+        run_in_background(
+            lambda: self.api_client.delete_category(cat_id),
+            on_success=lambda _: self.load_categories(),
+            on_error=_err
+        )
 
     def _on_search(self, event=None):
         q = self.search_entry.get().strip().lower()
@@ -283,15 +280,11 @@ class CategoryView(ctk.CTkFrame):
 
     def load_categories(self):
         self.lbl_count.configure(text="⏳ Querying database via FastAPI...", text_color=Theme.TEXT_MUTED)
-
-        def _fetch():
-            try:
-                cats = self.api_client.list_categories()
-                self.after(0, self._render_categories, cats)
-            except Exception as e:
-                self.after(0, lambda: self.lbl_count.configure(text=f"API Error: {e}", text_color=Theme.DANGER_TEXT))
-
-        threading.Thread(target=_fetch, daemon=True).start()
+        run_in_background(
+            lambda: self.api_client.list_categories(),
+            on_success=self._render_categories,
+            on_error=lambda e: self.lbl_count.configure(text=f"API Error: {e}", text_color=Theme.DANGER_TEXT)
+        )
 
     def _render_categories(self, categories):
         self.categories_list = categories or []

@@ -8,9 +8,11 @@ import customtkinter as ctk
 from app.client.api_client import APIClient
 from app.ui.theme import Theme
 from app.ui.accessibility.accessibility_manager import accessibility_manager
+from app.ui.common.async_task import run_in_background
 from app.ui.components.badge import StatusBadge
 from app.ui.components.dialogs import ConfirmDialog, DetailModal
 from app.ui.components.data_table import DataTable
+from app.ui.components.stat_card import StatCard
 
 
 class MedicineModal(ctk.CTkToplevel):
@@ -143,14 +145,11 @@ class MedicineModal(ctk.CTkToplevel):
         ).pack(side="right", padx=(10, 0))
 
     def _load_categories(self):
-        def _fetch():
-            try:
-                cats = self.api_client.list_categories()
-                self.after(0, self._populate_categories, cats)
-            except Exception as e:
-                self.after(0, self._on_err, f"Failed loading categories: {e}")
-
-        threading.Thread(target=_fetch, daemon=True).start()
+        run_in_background(
+            lambda: self.api_client.list_categories(),
+            on_success=self._populate_categories,
+            on_error=lambda e: self._on_err(f"Failed loading categories: {e}")
+        )
 
     def _populate_categories(self, categories):
         if not categories:
@@ -201,16 +200,12 @@ class MedicineModal(ctk.CTkToplevel):
         self.lbl_error.configure(text="")
 
         def _do():
-            try:
-                if self.medicine:
-                    self.api_client.update_medicine(self.medicine["id"], payload)
-                else:
-                    self.api_client.create_medicine(payload)
-                self.after(0, self._on_done)
-            except Exception as e:
-                self.after(0, self._on_err, str(e))
+            if self.medicine:
+                return self.api_client.update_medicine(self.medicine["id"], payload)
+            else:
+                return self.api_client.create_medicine(payload)
 
-        threading.Thread(target=_do, daemon=True).start()
+        run_in_background(_do, on_success=lambda _: self._on_done(), on_error=self._on_err)
 
     def _on_done(self):
         if self.on_success:
@@ -273,30 +268,80 @@ class MedicineView(ctk.CTkFrame):
 
         ctk.CTkButton(
             btn_row,
-            text="➕ New Medicine",
-            width=140,
-            height=36,
-            corner_radius=Theme.RADIUS_BUTTON,
-            fg_color=Theme.PRIMARY,
-            hover_color=Theme.PRIMARY_HOVER,
+            text="➕  Add Medicine",
+            width=145,
+            height=38,
+            corner_radius=Theme.RADIUS_PILL,
+            fg_color=Theme.ACCENT_LIME,
+            hover_color=Theme.ACCENT_LIME_HOVER,
+            text_color=Theme.ACCENT_LIME_TEXT,
             command=self._open_add_modal,
             font=accessibility_manager.get_font(12, weight="bold")
         ).pack(side="left", padx=5)
 
+        # 3 KPI Summary Cards (Mockup 2)
+        cards_row = ctk.CTkFrame(self, fg_color="transparent")
+        cards_row.pack(fill="x", padx=20, pady=(0, 14))
+        cards_row.grid_columnconfigure((0, 1, 2), weight=1, uniform="med_kpi")
+
+        self.card_total = StatCard(
+            cards_row,
+            title="Total Products",
+            value="—",
+            subtitle="Catalog master items",
+            icon="💊",
+            accent_color=Theme.PRIMARY
+        )
+        self.card_total.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
+
+        self.card_low = StatCard(
+            cards_row,
+            title="Low Stock Items",
+            value="—",
+            subtitle="At or below reorder level",
+            icon="⚠️",
+            accent_color=Theme.WARNING_TEXT
+        )
+        self.card_low.grid(row=0, column=1, sticky="nsew", padx=4)
+
+        self.card_out = StatCard(
+            cards_row,
+            title="Out of Stock",
+            value="—",
+            subtitle="Requires immediate PO",
+            icon="📦",
+            accent_color=Theme.DANGER_TEXT
+        )
+        self.card_out.grid(row=0, column=2, sticky="nsew", padx=(8, 0))
+
         # Multi-Criteria Filter Bar
         filter_bar = ctk.CTkFrame(self, fg_color="transparent")
-        filter_bar.pack(fill="x", padx=20, pady=(0, 10))
+        filter_bar.pack(fill="x", padx=20, pady=(0, 12))
 
         self.search_entry = ctk.CTkEntry(
             filter_bar,
             placeholder_text="🔍 Search brand name, SKU, or generic composition...",
-            height=36,
-            corner_radius=Theme.RADIUS_INPUT,
+            height=38,
+            corner_radius=Theme.RADIUS_PILL,
             border_color=Theme.BORDER,
             font=accessibility_manager.get_font(12)
         )
         self.search_entry.pack(side="left", fill="x", expand=True, padx=(0, 8))
         self.search_entry.bind("<KeyRelease>", self._apply_filters)
+
+        # Category Filter Dropdown
+        self.cat_filter_var = ctk.StringVar(value="All Categories")
+        self.cat_filter_opt = ctk.CTkOptionMenu(
+            filter_bar,
+            variable=self.cat_filter_var,
+            values=["All Categories"],
+            height=38,
+            width=160,
+            corner_radius=Theme.RADIUS_PILL,
+            font=accessibility_manager.get_font(12),
+            command=lambda v: self._apply_filters()
+        )
+        self.cat_filter_opt.pack(side="left", padx=(0, 8))
 
         # Stock Filter Dropdown
         self.stock_filter_var = ctk.StringVar(value="All Stock Levels")
@@ -304,8 +349,9 @@ class MedicineView(ctk.CTkFrame):
             filter_bar,
             variable=self.stock_filter_var,
             values=["All Stock Levels", "In Stock Only", "Low Stock (≤10)", "Out of Stock (0)"],
-            height=36,
+            height=38,
             width=150,
+            corner_radius=Theme.RADIUS_PILL,
             font=accessibility_manager.get_font(12),
             command=lambda v: self._apply_filters()
         )
@@ -317,8 +363,9 @@ class MedicineView(ctk.CTkFrame):
             filter_bar,
             variable=self.status_filter_var,
             values=["All Statuses", "Active Only", "Inactive Only"],
-            height=36,
+            height=38,
             width=130,
+            corner_radius=Theme.RADIUS_PILL,
             font=accessibility_manager.get_font(12),
             command=lambda v: self._apply_filters()
         )
@@ -409,17 +456,15 @@ class MedicineView(ctk.CTkFrame):
         )
 
     def _execute_archive(self, med_id: str):
-        def _do():
-            try:
-                self.api_client.deactivate_medicine(med_id)
-                self.after(0, self.load_medicines)
-            except Exception as e:
-                self.after(0, lambda: self.lbl_count.configure(text=f"Error: {e}", text_color=Theme.DANGER_TEXT))
-
-        threading.Thread(target=_do, daemon=True).start()
+        run_in_background(
+            lambda: self.api_client.deactivate_medicine(med_id),
+            on_success=lambda _: self.load_medicines(),
+            on_error=lambda e: self.lbl_count.configure(text=f"Error: {e}", text_color=Theme.DANGER_TEXT)
+        )
 
     def _apply_filters(self, event=None):
         q = self.search_entry.get().strip().lower()
+        cat_filter = self.cat_filter_var.get()
         stock_filter = self.stock_filter_var.get()
         status_filter = self.status_filter_var.get()
 
@@ -436,7 +481,11 @@ class MedicineView(ctk.CTkFrame):
             if not text_match:
                 return False
 
-            # 2. Stock filter
+            # 2. Category filter
+            if cat_filter != "All Categories" and m.get("category_name") != cat_filter:
+                return False
+
+            # 3. Stock filter
             stock = m.get("total_stock", 0)
             reorder = m.get("reorder_level", 10)
             if stock_filter == "In Stock Only" and stock <= 0:
@@ -446,7 +495,7 @@ class MedicineView(ctk.CTkFrame):
             if stock_filter == "Out of Stock (0)" and stock > 0:
                 return False
 
-            # 3. Status filter
+            # 4. Status filter
             if status_filter == "Active Only" and not m.get("is_active"):
                 return False
             if status_filter == "Inactive Only" and m.get("is_active"):
@@ -458,20 +507,36 @@ class MedicineView(ctk.CTkFrame):
 
     def load_medicines(self):
         self.lbl_count.configure(text="⏳ Querying database via FastAPI...", text_color=Theme.TEXT_MUTED)
-
-        def _fetch():
-            try:
-                meds = self.api_client.list_medicines()
-                self.after(0, self._render_medicines, meds)
-            except Exception as e:
-                self.after(0, lambda: self.lbl_count.configure(text=f"API Error: {e}", text_color=Theme.DANGER_TEXT))
-
-        threading.Thread(target=_fetch, daemon=True).start()
+        run_in_background(
+            lambda: self.api_client.list_medicines(),
+            on_success=self._render_medicines,
+            on_error=lambda e: self.lbl_count.configure(text=f"API Error: {e}", text_color=Theme.DANGER_TEXT)
+        )
 
     def _render_medicines(self, medicines):
         self.raw_medicines = medicines or []
+        total = len(self.raw_medicines)
+        low_count = sum(1 for m in self.raw_medicines if 0 < (m.get("total_stock") or 0) <= m.get("reorder_level", 10))
+        out_count = sum(1 for m in self.raw_medicines if (m.get("total_stock") or 0) <= 0)
+        active_count = sum(1 for m in self.raw_medicines if m.get("is_active"))
+
+        # Update KPI Summary Cards
+        self.card_total.update_value(str(total), f"{active_count} active items")
+        self.card_low.update_value(str(low_count), "At or below reorder level")
+        self.card_out.update_value(str(out_count), "Zero physical stock")
+
+        # Update categories list in filter menu
+        cats = sorted(list(set(m.get("category_name") for m in self.raw_medicines if m.get("category_name"))))
+        if cats:
+            current = self.cat_filter_var.get()
+            self.cat_filter_opt.configure(values=["All Categories"] + cats)
+            if current in cats or current == "All Categories":
+                self.cat_filter_var.set(current)
+            else:
+                self.cat_filter_var.set("All Categories")
+
         self.lbl_count.configure(
-            text=f"Total: {len(self.raw_medicines)} products registered in PostgreSQL formulary",
+            text=f"Total: {total} products registered in PostgreSQL formulary",
             text_color=Theme.TEXT_MUTED
         )
         self.table.set_data(self.raw_medicines)

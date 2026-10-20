@@ -86,12 +86,12 @@ class AccessibilityManager:
     def get_card_fg(self):
         if self.config.get("appearance_mode") == "high-contrast":
             return "#0A0A0A"
-        return ("#FFFFFF", "#1E293B")
+        return ("#FFFFFF", "#142826")
 
     def get_accent_color(self):
         if self.config.get("appearance_mode") == "high-contrast":
             return "#FACC15"
-        return ("#2563EB", "#3B82F6")
+        return ("#046166", "#057275")
 
     def subscribe(self, callback: Callable[[], None]):
         if callback not in self.listeners:

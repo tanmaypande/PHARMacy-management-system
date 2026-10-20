@@ -9,6 +9,7 @@ import customtkinter as ctk
 from app.client.api_client import APIClient
 from app.ui.theme import Theme
 from app.ui.accessibility.accessibility_manager import accessibility_manager
+from app.ui.common.async_task import run_in_background
 from app.ui.components.badge import StatusBadge
 from app.ui.components.dialogs import DetailModal
 from app.ui.components.data_table import DataTable
@@ -117,14 +118,11 @@ class BatchModal(ctk.CTkToplevel):
         ).pack(side="right", padx=(10, 0))
 
     def _load_medicines(self):
-        def _fetch():
-            try:
-                meds = self.api_client.list_medicines(is_active=True)
-                self.after(0, self._populate_medicines, meds)
-            except Exception as e:
-                self.after(0, self._on_err, f"Failed loading medicines: {e}")
-
-        threading.Thread(target=_fetch, daemon=True).start()
+        run_in_background(
+            lambda: self.api_client.list_medicines(is_active=True),
+            on_success=self._populate_medicines,
+            on_error=lambda e: self._on_err(f"Failed loading medicines: {e}")
+        )
 
     def _populate_medicines(self, medicines):
         if not medicines:
@@ -183,14 +181,11 @@ class BatchModal(ctk.CTkToplevel):
         self.btn_save.configure(state="disabled", text="Committing Batch...")
         self.lbl_error.configure(text="")
 
-        def _do():
-            try:
-                self.api_client.create_batch(payload)
-                self.after(0, self._on_done)
-            except Exception as e:
-                self.after(0, self._on_err, str(e))
-
-        threading.Thread(target=_do, daemon=True).start()
+        run_in_background(
+            lambda: self.api_client.create_batch(payload),
+            on_success=lambda _: self._on_done(),
+            on_error=self._on_err
+        )
 
     def _on_done(self):
         if self.on_success:
@@ -427,15 +422,11 @@ class InventoryView(ctk.CTkFrame):
 
     def load_batches(self):
         self.lbl_count.configure(text="⏳ Querying database via FastAPI...", text_color=Theme.TEXT_MUTED)
-
-        def _fetch():
-            try:
-                batches = self.api_client.list_batches()
-                self.after(0, self._render_batches, batches)
-            except Exception as e:
-                self.after(0, lambda: self.lbl_count.configure(text=f"API Error: {e}", text_color=Theme.DANGER_TEXT))
-
-        threading.Thread(target=_fetch, daemon=True).start()
+        run_in_background(
+            lambda: self.api_client.list_batches(),
+            on_success=self._render_batches,
+            on_error=lambda e: self.lbl_count.configure(text=f"API Error: {e}", text_color=Theme.DANGER_TEXT)
+        )
 
     def _render_batches(self, batches):
         self.raw_batches = batches or []

@@ -1,64 +1,81 @@
 """
 Design System and Theme Tokens for MediCare Pharmacy Management System.
-Tailored for a polished, modern Healthcare SaaS aesthetic with full CustomTkinter light/dark support.
+Faithfully tailored to the Modern Healthcare Deep-Teal & Lime-Green Aesthetic.
+Features:
+- Clean off-white/mint canvas (#F2F6F5)
+- Crisp white sidebar (#FFFFFF) with deep-teal active pill (#046166)
+- Rich deep-teal hero banner (#046166 / #057275)
+- Vibrant lime-green accent buttons (#C6EB67) with dark forest text (#0F2926)
+- Soft mint-tinted card surfaces and table headers (#E8F2EF)
 """
 from typing import Tuple
 
 
 class Theme:
     # Surface & Backgrounds (Light mode, Dark mode)
-    BG_APP = ("#F8FAFC", "#0B0F19")            # Slate-50 / Deep Dark Canvas
-    BG_SIDEBAR = ("#0F172A", "#0A0E1A")        # Executive Deep Navy
-    BG_CARD = ("#FFFFFF", "#1E293B")           # Pure White Card / Slate-800
-    BG_CARD_HOVER = ("#F8FAFC", "#273549")     # Card Hover
-    BG_INPUT = ("#FFFFFF", "#0F172A")          # Input Box Surface
-    BG_MUTED = ("#F1F5F9", "#243248")          # Slate-100 / Slate-750
-    BG_ROW_ALT = ("#FAFAFA", "#182234")        # Alternating table rows
-    BG_ROW_HOVER = ("#EFF6FF", "#283548")      # Table row hover
+    BG_APP = ("#F2F6F5", "#0B1716")            # Soft mint-tinted light canvas / Deep dark forest
+    BG_SIDEBAR = ("#FFFFFF", "#0F201E")        # Clean white sidebar / Dark forest sidebar
+    BG_CARD = ("#FFFFFF", "#142826")           # Pure white card / Forest card
+    BG_CARD_HOVER = ("#F8FAFA", "#1B3330")     # Subtle hover surface
+    BG_INPUT = ("#FFFFFF", "#0F201E")          # Clean input field surface
+    BG_MUTED = ("#E8F2EF", "#18302E")          # Soft mint-grey accent surface
+    BG_ROW_ALT = ("#F9FBFA", "#122523")        # Alternating table rows
+    BG_ROW_HOVER = ("#EDF6F3", "#1B3734")      # Table row hover
+
+    # Hero / Banner Surface (Deep Teal from Mockup 1)
+    BG_BANNER = ("#046166", "#044E52")         # Deep medical teal banner
+    BG_BANNER_ACCENT = ("#057275", "#066267")  # Secondary gradient tone
 
     # Borders & Dividers
-    BORDER = ("#E2E8F0", "#334155")            # Slate-200 / Slate-700
-    BORDER_FOCUS = ("#2563EB", "#60A5FA")      # Blue Focus Ring
-    DIVIDER = ("#F1F5F9", "#1E293B")
+    BORDER = ("#E0ECE8", "#20423E")            # Subtle mint-tinted border
+    BORDER_FOCUS = ("#057275", "#10B981")      # Deep teal / emerald focus ring
+    DIVIDER = ("#E8F2EF", "#18302E")
 
-    # Brand & Action Colors (Professional Navy & Royal Blue)
-    PRIMARY = ("#2563EB", "#3B82F6")           # Medical Blue
-    PRIMARY_HOVER = ("#1D4ED8", "#2563EB")
-    PRIMARY_LIGHT = ("#EFF6FF", "#172554")
+    # Primary Brand Colors (Deep Medical Teal)
+    PRIMARY = ("#046166", "#057275")           # Deep teal
+    PRIMARY_HOVER = ("#034E52", "#048E94")     # Darker / richer teal hover
+    PRIMARY_LIGHT = ("#E6F4F1", "#133532")     # Very light teal tint
     PRIMARY_TEXT = ("#FFFFFF", "#FFFFFF")
 
-    SECONDARY = ("#F1F5F9", "#334155")
-    SECONDARY_HOVER = ("#E2E8F0", "#475569")
-    SECONDARY_TEXT = ("#334155", "#F8FAFC")
+    # Vibrant Lime-Green Accent (Mockup 2 Call-to-Action Buttons & Badges)
+    ACCENT_LIME = ("#C6EB67", "#A3E635")       # Vibrant lime/pistachio green
+    ACCENT_LIME_HOVER = ("#B5DF54", "#84CC16") # Deeper lime on hover
+    ACCENT_LIME_TEXT = ("#0F2926", "#0A1F1D")  # Dark forest green text for high contrast
+
+    # Secondary Button & Element Colors
+    SECONDARY = ("#E8F2EF", "#18302E")
+    SECONDARY_HOVER = ("#DCEAE5", "#22423E")
+    SECONDARY_TEXT = ("#0F2926", "#E8F4F1")
 
     # Typography Colors
-    TEXT_MAIN = ("#0F172A", "#F8FAFC")         # Slate-900 / Slate-50
-    TEXT_MUTED = ("#64748B", "#94A3B8")        # Slate-500 / Slate-400
-    TEXT_LIGHT = ("#94A3B8", "#64748B")
-    TEXT_NAV_ACTIVE = ("#FFFFFF", "#FFFFFF")
-    TEXT_NAV_INACTIVE = ("#94A3B8", "#64748B")
+    TEXT_MAIN = ("#0F2926", "#F2F8F6")         # Rich dark slate-forest / Crisp light
+    TEXT_MUTED = ("#5A7571", "#8FAFA9")        # Muted slate-mint text
+    TEXT_LIGHT = ("#8B9E9B", "#627E79")        # Subdued helper text
+    TEXT_NAV_ACTIVE = ("#FFFFFF", "#FFFFFF")   # High-contrast white on active teal pill
+    TEXT_NAV_INACTIVE = ("#5A7571", "#8FAFA9") # Muted nav item
 
     # Status & TQM Alert Colors
-    SUCCESS_BG = ("#DCFCE7", "#064E3B")        # Emerald
-    SUCCESS_TEXT = ("#15803D", "#4ADE80")
+    SUCCESS_BG = ("#DCFCE7", "#064E3B")        # Soft emerald mint
+    SUCCESS_TEXT = ("#065F46", "#4ADE80")
 
-    WARNING_BG = ("#FEF3C7", "#78350F")        # Amber (Near Expiry / Low Stock)
+    WARNING_BG = ("#FEF3C7", "#78350F")        # Soft amber
     WARNING_TEXT = ("#B45309", "#FCD34D")
 
-    DANGER_BG = ("#FEE2E2", "#7F1D1D")         # Red (Expired / Error)
+    DANGER_BG = ("#FEE2E2", "#7F1D1D")         # Soft coral red
     DANGER_TEXT = ("#B91C1C", "#FCA5A5")
 
-    INFO_BG = ("#E0F2FE", "#0C4A6E")           # Sky Blue
+    INFO_BG = ("#E0F2FE", "#0C4A6E")           # Soft sky blue
     INFO_TEXT = ("#0284C7", "#38BDF8")
 
-    # High Contrast Overrides (used when accessibility mode is enabled)
+    # High Contrast Overrides (WCAG AAA)
     HC_CARD = "#000000"
     HC_TEXT = "#FFFFFF"
     HC_ACCENT = "#FACC15"                      # High-visibility yellow
     HC_BORDER = "#FACC15"
 
     # Shape & Geometry Tokens
-    RADIUS_CARD = 12
-    RADIUS_BUTTON = 8
-    RADIUS_INPUT = 8
-    RADIUS_BADGE = 6
+    RADIUS_CARD = 14
+    RADIUS_BUTTON = 10
+    RADIUS_INPUT = 10
+    RADIUS_BADGE = 8
+    RADIUS_PILL = 20

@@ -19,7 +19,10 @@ class APIClient:
         self.auth_token = token
 
     def _headers(self) -> Dict[str, str]:
-        headers = {"Content-Type": "application/json"}
+        headers = {
+            "Content-Type": "application/json",
+            "Connection": "close"
+        }
         if self.auth_token:
             headers["Authorization"] = f"Bearer {self.auth_token}"
         return headers
