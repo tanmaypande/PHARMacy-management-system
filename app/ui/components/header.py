@@ -54,13 +54,14 @@ class TopHeader(ctk.CTkFrame):
             self.btn_collapse = ctk.CTkButton(
                 left_box,
                 text="☰",
-                width=36,
-                height=36,
+                width=38,
+                height=38,
                 corner_radius=8,
                 fg_color=Theme.SECONDARY,
                 hover_color=Theme.SECONDARY_HOVER,
                 text_color=Theme.TEXT_MAIN,
-                font=accessibility_manager.get_font(14, weight="bold"),
+                font=accessibility_manager.get_font(16, weight="bold"),
+                cursor="hand2",
                 command=self.on_toggle_sidebar
             )
             self.btn_collapse.pack(side="left", padx=(0, 14))
@@ -148,7 +149,23 @@ class TopHeader(ctk.CTkFrame):
             font=accessibility_manager.get_font(11, weight="bold"),
             command=self._handle_theme_toggle
         )
-        self.btn_theme.pack(side="left", padx=(0, 12))
+        self.btn_theme.pack(side="left", padx=(0, 8))
+
+        # 6. Shortcuts Help Button (⌨)
+        self.btn_shortcuts = ctk.CTkButton(
+            right_box,
+            text="⌨ Hotkeys (F1)",
+            width=96,
+            height=34,
+            corner_radius=8,
+            fg_color=Theme.SECONDARY,
+            hover_color=Theme.SECONDARY_HOVER,
+            text_color=Theme.SECONDARY_TEXT,
+            font=accessibility_manager.get_font(11, weight="bold"),
+            cursor="hand2",
+            command=self._show_shortcuts
+        )
+        self.btn_shortcuts.pack(side="left", padx=(0, 12))
 
         # 6. User Profile Card
         user_card = ctk.CTkFrame(
@@ -214,6 +231,10 @@ class TopHeader(ctk.CTkFrame):
     def _show_alerts(self):
         AlertsModal(self.winfo_toplevel(), alerts=self.current_alerts)
 
+    def _show_shortcuts(self):
+        from app.ui.components.dialogs import ShortcutsModal
+        ShortcutsModal(self.winfo_toplevel())
+
     def _handle_search(self, event=None):
         query = self.search_entry.get().strip()
         if self.on_search and query:
@@ -224,4 +245,19 @@ class TopHeader(ctk.CTkFrame):
         current_mode = accessibility_manager.config.get("appearance_mode", "light")
         self.btn_theme.configure(text="🌙 Dark" if current_mode == "light" else "☀️ Light")
         if self.on_toggle_theme:
-            self.on_toggle_theme()
+            self.on_toggle_theme("theme")
+
+    def update_sidebar_button(self, is_collapsed: bool):
+        if hasattr(self, "btn_collapse"):
+            if is_collapsed:
+                self.btn_collapse.configure(
+                    fg_color=Theme.PRIMARY,
+                    hover_color=Theme.PRIMARY_HOVER,
+                    text_color="#FFFFFF"
+                )
+            else:
+                self.btn_collapse.configure(
+                    fg_color=Theme.SECONDARY,
+                    hover_color=Theme.SECONDARY_HOVER,
+                    text_color=Theme.TEXT_MAIN
+                )

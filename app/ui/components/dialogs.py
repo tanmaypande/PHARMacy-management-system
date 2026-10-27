@@ -250,3 +250,122 @@ class DetailModal(ctk.CTkToplevel):
             font=accessibility_manager.get_font(12, weight="bold"),
             command=self.destroy
         ).pack(fill="x")
+
+
+class ShortcutsModal(ctk.CTkToplevel):
+    """
+    Accessible Keyboard Shortcuts Guide Modal.
+    Fulfills TQM Goal Q12 — Keyboard-Only Accessibility.
+    Can be opened anytime via F1 or Ctrl+H.
+    """
+    def __init__(self, master):
+        super().__init__(master)
+        self.title("Keyboard Navigation & Shortcuts Reference")
+        self.geometry("620x580")
+        self.resizable(False, False)
+        self.grab_set()
+
+        self.bind("<Escape>", lambda e: self.destroy())
+
+        container = ctk.CTkFrame(self, fg_color="transparent")
+        container.pack(fill="both", expand=True, padx=24, pady=20)
+
+        # Header
+        ctk.CTkLabel(
+            container,
+            text="⌨️ Keyboard Navigation & Hotkeys Guide",
+            font=accessibility_manager.get_font(18, weight="bold"),
+            text_color=Theme.TEXT_MAIN
+        ).pack(anchor="w")
+
+        ctk.CTkLabel(
+            container,
+            text="TQM Q12 Standard: Complete keyboard control for vision and mobility accessibility.",
+            font=accessibility_manager.get_font(12),
+            text_color=Theme.TEXT_MUTED
+        ).pack(anchor="w", pady=(0, 12))
+
+        # Scrollable Shortcuts List
+        scroll = ctk.CTkScrollableFrame(container, fg_color="transparent")
+        scroll.pack(fill="both", expand=True, pady=(0, 14))
+
+        shortcuts = [
+            ("Global Navigation Hotkeys", [
+                ("Ctrl + B", "Toggle Sidebar", "Collapse or expand left navigation rail"),
+                ("Ctrl + F", "Search Formulary", "Focus global search entry bar instantly"),
+                ("Ctrl + R / F5", "Refresh Live Data", "Re-query PostgreSQL database and recalculate metrics"),
+                ("Ctrl + N", "Add New Record", "Open 'New' dialog on current page (Medicine, Category, Batch)"),
+                ("Esc", "Close / Cancel", "Dismiss modal, close alerts dialog, or blur search focus"),
+                ("F1 / Ctrl + H", "Keyboard Guide", "Open this keyboard shortcuts reference sheet"),
+            ]),
+            ("Direct Page Jump Hotkeys", [
+                ("Ctrl + 1", "Dashboard", "Clinical KPIs, alert notices & drug distribution chart"),
+                ("Ctrl + 2", "Medicines Formulary", "Master pharmaceutical items, SKUs, and formulations"),
+                ("Ctrl + 3", "Drug Categories", "Therapeutic drug classifications"),
+                ("Ctrl + 4", "Inventory Batches", "Lot traceability, expiry countdowns & quarantine"),
+                ("Ctrl + 5", "Sales & Billing", "Point of sale dispensing & counter checkout"),
+                ("Ctrl + 6", "Purchases", "Inbound purchase orders & vendor shipments"),
+                ("Ctrl + 7", "Suppliers", "Licensed wholesale distributor registry"),
+                ("Ctrl + 8", "Customers", "Patient profiles and medication records"),
+                ("Ctrl + 9", "Reports & Quality", "TQM Pareto analyses and expiry compliance audits"),
+                ("Ctrl + 0", "Settings", "Visual contrast, theme switching & dynamic font scaling"),
+                ("Ctrl + U", "Users & Roles", "RBAC access control and security audit logs"),
+            ]),
+            ("Sidebar & Form Controls", [
+                ("Up / Down", "Navigate Menu", "Move selection between sidebar navigation items"),
+                ("Enter / Space", "Activate", "Trigger focused button, menu item, or submit form"),
+                ("Tab / Shift+Tab", "Focus Next/Prev", "Cycle keyboard focus through all clickable controls"),
+            ])
+        ]
+
+        for section_title, items in shortcuts:
+            sec_lbl = ctk.CTkLabel(
+                scroll,
+                text=section_title.upper(),
+                font=accessibility_manager.get_font(11, weight="bold"),
+                text_color=Theme.PRIMARY
+            )
+            sec_lbl.pack(anchor="w", padx=4, pady=(10, 4))
+
+            for key_combo, action_name, desc in items:
+                row = ctk.CTkFrame(scroll, fg_color=Theme.BG_MUTED, corner_radius=6)
+                row.pack(fill="x", pady=2)
+
+                # Key Badge
+                k_box = ctk.CTkFrame(row, fg_color=Theme.BG_CARD, corner_radius=5, border_width=1, border_color=Theme.BORDER)
+                k_box.pack(side="left", padx=8, pady=5)
+                ctk.CTkLabel(
+                    k_box,
+                    text=f" {key_combo} ",
+                    font=accessibility_manager.get_font(11, weight="bold", family="Consolas"),
+                    text_color=Theme.TEXT_MAIN
+                ).pack(padx=4, pady=2)
+
+                # Action and Description
+                ctk.CTkLabel(
+                    row,
+                    text=action_name,
+                    width=150,
+                    anchor="w",
+                    font=accessibility_manager.get_font(12, weight="bold"),
+                    text_color=Theme.TEXT_MAIN
+                ).pack(side="left", padx=6)
+
+                ctk.CTkLabel(
+                    row,
+                    text=desc,
+                    anchor="w",
+                    font=accessibility_manager.get_font(11),
+                    text_color=Theme.TEXT_MUTED
+                ).pack(side="left", padx=4)
+
+        ctk.CTkButton(
+            container,
+            text="Close Guide (Esc)",
+            height=36,
+            fg_color=Theme.PRIMARY,
+            hover_color=Theme.PRIMARY_HOVER,
+            text_color="#FFFFFF",
+            font=accessibility_manager.get_font(12, weight="bold"),
+            command=self.destroy
+        ).pack(fill="x")

@@ -83,6 +83,7 @@ class MainWindow(ctk.CTk):
         )
         self.sidebar.grid(row=0, column=0, sticky="nsew")
         self.sidebar.grid_propagate(False)
+        self.sidebar.pack_propagate(False)
 
         # Brand Container
         self.brand_frame = ctk.CTkFrame(self.sidebar, fg_color="transparent")
@@ -92,22 +93,22 @@ class MainWindow(ctk.CTk):
         self.logo_row.pack(anchor="w")
 
         # Teal logo badge
-        logo_badge = ctk.CTkFrame(self.logo_row, fg_color=Theme.PRIMARY, width=36, height=36, corner_radius=8)
-        logo_badge.pack(side="left", padx=(0, 10))
-        logo_badge.pack_propagate(False)
+        self.logo_badge = ctk.CTkFrame(self.logo_row, fg_color=Theme.PRIMARY, width=36, height=36, corner_radius=8)
+        self.logo_badge.pack(side="left", padx=(0, 10))
+        self.logo_badge.pack_propagate(False)
 
         self.lbl_logo_icon = ctk.CTkLabel(
-            logo_badge,
+            self.logo_badge,
             text="🏥",
             font=accessibility_manager.get_font(18)
         )
         self.lbl_logo_icon.pack(expand=True)
 
-        logo_titles = ctk.CTkFrame(self.logo_row, fg_color="transparent")
-        logo_titles.pack(side="left")
+        self.logo_titles = ctk.CTkFrame(self.logo_row, fg_color="transparent")
+        self.logo_titles.pack(side="left")
 
         self.lbl_logo_text = ctk.CTkLabel(
-            logo_titles,
+            self.logo_titles,
             text="MediCare PMS",
             font=accessibility_manager.get_font(16, weight="bold"),
             text_color=Theme.TEXT_MAIN
@@ -115,7 +116,7 @@ class MainWindow(ctk.CTk):
         self.lbl_logo_text.pack(anchor="w")
 
         self.lbl_logo_sub = ctk.CTkLabel(
-            logo_titles,
+            self.logo_titles,
             text="Clinical SaaS • TQM Q12",
             font=accessibility_manager.get_font(10),
             text_color=Theme.TEXT_MUTED
@@ -148,9 +149,11 @@ class MainWindow(ctk.CTk):
         # Scrollable Nav Buttons in the middle
         self.nav_scroll = ctk.CTkScrollableFrame(self.sidebar, fg_color="transparent")
         self.nav_scroll.pack(side="top", fill="both", expand=True, padx=6, pady=0)
+        self.nav_scroll.grid_columnconfigure(0, weight=1)
 
         self.nav_buttons = {}
         self.section_headers = []
+        self._nav_row_counter = 0
 
         def _add_section(label: str):
             hdr = ctk.CTkLabel(
@@ -159,20 +162,38 @@ class MainWindow(ctk.CTk):
                 font=accessibility_manager.get_font(9, weight="bold"),
                 text_color=Theme.TEXT_MUTED
             )
-            hdr.pack(anchor="w", padx=12, pady=(8, 2))
+            hdr.grid(row=self._nav_row_counter, column=0, sticky="w", padx=12, pady=(10, 3))
             self.section_headers.append(hdr)
+            self._nav_row_counter += 1
+
+        def _create_nav_button(key: str, icon: str, label: str):
+            btn = ctk.CTkButton(
+                self.nav_scroll,
+                text=f"  {icon}   {label}",
+                height=38,
+                corner_radius=10,
+                anchor="w",
+                fg_color="transparent",
+                text_color=Theme.TEXT_MUTED,
+                hover_color=Theme.SECONDARY_HOVER,
+                font=accessibility_manager.get_font(12),
+                command=lambda k=key: self.navigate(k)
+            )
+            btn.grid(row=self._nav_row_counter, column=0, sticky="ew", pady=2, padx=4)
+            self.nav_buttons[key] = btn
+            self._nav_row_counter += 1
 
         _add_section("OPERATIONS")
         for key, icon, label, _, _ in self.nav_items[:4]:
-            self._create_nav_button(key, icon, label)
+            _create_nav_button(key, icon, label)
 
         _add_section("TRANSACTIONS & DIRECTORY")
         for key, icon, label, _, _ in self.nav_items[4:8]:
-            self._create_nav_button(key, icon, label)
+            _create_nav_button(key, icon, label)
 
         _add_section("QUALITY & SYSTEM")
         for key, icon, label, _, _ in self.nav_items[8:]:
-            self._create_nav_button(key, icon, label)
+            _create_nav_button(key, icon, label)
 
         # ================= 2. Main Right Container =================
         self.right_container = ctk.CTkFrame(self, fg_color="transparent", corner_radius=0)
@@ -198,22 +219,6 @@ class MainWindow(ctk.CTk):
         self.view_container.grid_rowconfigure(0, weight=1)
         self.view_container.grid_columnconfigure(0, weight=1)
 
-    def _create_nav_button(self, key: str, icon: str, label: str):
-        btn = ctk.CTkButton(
-            self.nav_scroll,
-            text=f"  {icon}   {label}",
-            height=38,
-            corner_radius=10,
-            anchor="w",
-            fg_color="transparent",
-            text_color=Theme.TEXT_MUTED,
-            hover_color=Theme.SECONDARY_HOVER,
-            font=accessibility_manager.get_font(12),
-            command=lambda k=key: self.navigate(k)
-        )
-        btn.pack(fill="x", pady=2, padx=4)
-        self.nav_buttons[key] = btn
-
     def toggle_sidebar(self):
         self.is_sidebar_collapsed = not self.is_sidebar_collapsed
         new_width = 68 if self.is_sidebar_collapsed else 240
@@ -221,25 +226,50 @@ class MainWindow(ctk.CTk):
         self.sidebar.configure(width=new_width)
 
         if self.is_sidebar_collapsed:
-            self.lbl_logo_text.pack_forget()
-            self.lbl_logo_sub.pack_forget()
-            self.lbl_sidebar_db.pack_forget()
+            # 1. Collapse logo header to icon badge only
+            self.logo_titles.pack_forget()
+            self.logo_badge.pack_configure(padx=0)
+            self.brand_frame.pack_configure(padx=6)
+
+            # 2. Hide section headers cleanly (retaining grid positions)
             for hdr in self.section_headers:
-                hdr.pack_forget()
+                hdr.grid_remove()
+
+            # 3. Collapse nav buttons to icon-only centered
             for key, btn in self.nav_buttons.items():
                 icon = next(item[1] for item in self.nav_items if item[0] == key)
-                btn.configure(text=icon, anchor="center", width=44)
+                btn.configure(text=icon, anchor="center")
+                btn.grid_configure(padx=2)
+
+            # 4. Collapse bottom status pill to compact dot
+            self.lbl_sidebar_db.pack_forget()
+            self.lbl_sidebar_status.pack_configure(anchor="center", padx=0, pady=6)
             self.lbl_sidebar_status.configure(text="●", font=accessibility_manager.get_font(16))
         else:
-            self.lbl_logo_text.pack(side="left")
-            self.lbl_logo_sub.pack(anchor="w", padx=(34, 0), pady=(1, 0))
-            self.lbl_sidebar_db.pack(anchor="w", padx=10, pady=(0, 6))
+            # 1. Expand logo header
+            self.brand_frame.pack_configure(padx=14)
+            self.logo_badge.pack_configure(padx=(0, 10))
+            self.logo_titles.pack(side="left")
+
+            # 2. Restore all section headers in their exact original spots
+            for hdr in self.section_headers:
+                hdr.grid()
+
+            # 3. Expand nav buttons to full icon + label
             for key, btn in self.nav_buttons.items():
                 meta = next(item for item in self.nav_items if item[0] == key)
                 btn.configure(text=f"  {meta[1]}   {meta[2]}", anchor="w")
+                btn.grid_configure(padx=4)
+
+            # 4. Expand bottom status pill to full text
+            self.lbl_sidebar_status.pack_configure(anchor="w", padx=10, pady=(6, 1))
             self.lbl_sidebar_status.configure(font=accessibility_manager.get_font(11, weight="bold"))
-            # Rebuild section headers on navigate
-            self.navigate(self.current_view_key)
+            self.lbl_sidebar_db.pack(anchor="w", padx=10, pady=(0, 6))
+            self._update_sidebar_health_display()
+
+        # 5. Visual update on top header hamburger button
+        if hasattr(self.top_header, "update_sidebar_button"):
+            self.top_header.update_sidebar_button(self.is_sidebar_collapsed)
 
     def _bind_keyboard_shortcuts(self):
         # Hotkeys for instant navigation
@@ -490,14 +520,19 @@ class MainWindow(ctk.CTk):
         threading.Thread(target=_loop, daemon=True).start()
 
     def _render_health(self, health: dict, alerts: list):
-        api_ok = health.get("api_service") == "running"
-        db_ok = health.get("database", {}).get("database_connected", False)
+        self._last_api_ok = health.get("api_service") == "running"
+        self._last_db_ok = health.get("database", {}).get("database_connected", False)
 
         # Update TopHeader
-        self.top_header.update_health_status(api_ok, db_ok)
+        self.top_header.update_health_status(self._last_api_ok, self._last_db_ok)
         self.top_header.set_alerts(alerts)
 
         # Update Sidebar
+        self._update_sidebar_health_display()
+
+    def _update_sidebar_health_display(self):
+        api_ok = getattr(self, "_last_api_ok", False)
+        db_ok = getattr(self, "_last_db_ok", False)
         if not self.is_sidebar_collapsed:
             if api_ok and db_ok:
                 self.lbl_sidebar_status.configure(text="● API & DB Online", text_color="#34D399")
