@@ -19,7 +19,7 @@ def test_create_and_list_category():
     category_id = data["id"]
 
     # 2. List
-    res_list = client.get("/api/v1/categories")
+    res_list = client.get("/api/v1/categories?limit=1000")
     assert res_list.status_code == 200
     names = [c["name"] for c in res_list.json()]
     assert unique_name in names
@@ -28,6 +28,9 @@ def test_create_and_list_category():
     res_single = client.get(f"/api/v1/categories/{category_id}")
     assert res_single.status_code == 200
     assert res_single.json()["id"] == category_id
+
+    # 4. Cleanup
+    client.delete(f"/api/v1/categories/{category_id}")
 
 
 def test_duplicate_category_rejected():

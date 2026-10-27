@@ -277,23 +277,32 @@ class DashboardView(ctk.CTkFrame):
             expiring = self.api_client.list_expiring_soon(days=30)
             medicines = self.api_client.list_medicines()
             batches = self.api_client.list_batches()
-            return (metrics, expiring, medicines, batches)
+            try:
+                sales_summary = self.api_client.get_today_sales_summary()
+            except Exception:
+                sales_summary = {"today_revenue": 0.0, "today_bills_count": 0}
+            return (metrics, expiring, medicines, batches, sales_summary)
 
         def _on_success(data):
-            metrics, expiring, medicines, batches = data
-            self._render_all(metrics, expiring, medicines, batches)
+            metrics, expiring, medicines, batches, sales_summary = data
+            self._render_all(metrics, expiring, medicines, batches, sales_summary)
 
         def _on_error(exc):
             self._render_error(str(exc))
 
         run_in_background(_fetch, on_success=_on_success, on_error=_on_error)
 
-    def _render_all(self, metrics: dict, expiring: list, medicines: list, batches: list):
+    def _render_all(self, metrics: dict, expiring: list, medicines: list, batches: list, sales_summary: dict = None):
         tot_meds = metrics.get("total_medicines", 0)
         act_meds = metrics.get("active_medicines", 0)
         self.card_total_meds.update_value(tot_meds, f"{act_meds} Active Master Items")
 
-        self.card_today_sales.update_value("$0.00", "POS In Development • Phase 2")
+        if sales_summary:
+            today_rev = sales_summary.get("today_revenue", 0.0)
+            today_bills = sales_summary.get("today_bills_count", 0)
+            self.card_today_sales.update_value(f"${today_rev:.2f}", f"{today_bills} Transactions Today")
+        else:
+            self.card_today_sales.update_value("$0.00", "0 Transactions Today")
 
         low_stock = metrics.get("low_stock_medicines", 0)
         self.card_low_stock.update_value(

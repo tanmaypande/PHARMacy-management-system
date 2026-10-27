@@ -21,6 +21,7 @@ from app.ui.dashboard.dashboard_view import DashboardView
 from app.ui.categories.category_view import CategoryView
 from app.ui.medicines.medicine_view import MedicineView
 from app.ui.inventory.inventory_view import InventoryView
+from app.ui.billing.billing_view import BillingView
 from app.ui.settings.settings_view import SettingsView
 from app.ui.common.roadmap_view import RoadmapView
 
@@ -226,28 +227,31 @@ class MainWindow(ctk.CTk):
         self.sidebar.configure(width=new_width)
 
         if self.is_sidebar_collapsed:
-            # 1. Collapse logo header to icon badge only
+            # 1. Collapse logo header to icon badge only, centered
             self.logo_titles.pack_forget()
             self.logo_badge.pack_configure(padx=0)
-            self.brand_frame.pack_configure(padx=6)
+            self.logo_row.pack_configure(anchor="center")
+            self.brand_frame.pack_configure(padx=4)
 
             # 2. Hide section headers cleanly (retaining grid positions)
             for hdr in self.section_headers:
                 hdr.grid_remove()
 
-            # 3. Collapse nav buttons to icon-only centered
+            # 3. Collapse nav buttons to icon-only centered with prominent icon font
             for key, btn in self.nav_buttons.items():
                 icon = next(item[1] for item in self.nav_items if item[0] == key)
-                btn.configure(text=icon, anchor="center")
+                btn.configure(text=icon, anchor="center", font=accessibility_manager.get_font(15))
                 btn.grid_configure(padx=2)
 
             # 4. Collapse bottom status pill to compact dot
+            self.bot_frame.pack_configure(padx=6, pady=8)
             self.lbl_sidebar_db.pack_forget()
             self.lbl_sidebar_status.pack_configure(anchor="center", padx=0, pady=6)
             self.lbl_sidebar_status.configure(text="●", font=accessibility_manager.get_font(16))
         else:
             # 1. Expand logo header
             self.brand_frame.pack_configure(padx=14)
+            self.logo_row.pack_configure(anchor="w")
             self.logo_badge.pack_configure(padx=(0, 10))
             self.logo_titles.pack(side="left")
 
@@ -258,10 +262,11 @@ class MainWindow(ctk.CTk):
             # 3. Expand nav buttons to full icon + label
             for key, btn in self.nav_buttons.items():
                 meta = next(item for item in self.nav_items if item[0] == key)
-                btn.configure(text=f"  {meta[1]}   {meta[2]}", anchor="w")
+                btn.configure(text=f"  {meta[1]}   {meta[2]}", anchor="w", font=accessibility_manager.get_font(12))
                 btn.grid_configure(padx=4)
 
             # 4. Expand bottom status pill to full text
+            self.bot_frame.pack_configure(padx=12, pady=12)
             self.lbl_sidebar_status.pack_configure(anchor="w", padx=10, pady=(6, 1))
             self.lbl_sidebar_status.configure(font=accessibility_manager.get_font(11, weight="bold"))
             self.lbl_sidebar_db.pack(anchor="w", padx=10, pady=(0, 6))
@@ -272,20 +277,191 @@ class MainWindow(ctk.CTk):
             self.top_header.update_sidebar_button(self.is_sidebar_collapsed)
 
     def _bind_keyboard_shortcuts(self):
-        # Hotkeys for instant navigation
-        self.bind("<Control-Key-1>", lambda e: self.navigate("dashboard"))
-        self.bind("<Control-Key-2>", lambda e: self.navigate("medicines"))
-        self.bind("<Control-Key-3>", lambda e: self.navigate("categories"))
-        self.bind("<Control-Key-4>", lambda e: self.navigate("inventory"))
-        self.bind("<Control-Key-5>", lambda e: self.navigate("sales"))
-        self.bind("<Control-Key-6>", lambda e: self.navigate("purchases"))
-        self.bind("<Control-Key-7>", lambda e: self.navigate("suppliers"))
-        self.bind("<Control-Key-8>", lambda e: self.navigate("customers"))
-        self.bind("<Control-Key-9>", lambda e: self.navigate("reports"))
-        self.bind("<Control-Key-0>", lambda e: self.navigate("settings"))
-        self.bind("<Control-u>", lambda e: self.navigate("users"))
-        self.bind("<Control-b>", lambda e: self.toggle_sidebar())
-        self.bind("<Control-f>", lambda e: self.top_header.search_entry.focus_set())
+        # Universal dispatcher that handles all Ctrl keys, NumLock/CapsLock state, F-keys, and arrows
+        self.bind_all("<Key>", self._on_global_key_press)
+
+        # Redundant explicit bindings across root and all widgets for maximum responsiveness
+        for pattern in [
+            "<Control-b>", "<Control-B>", "<Control-Key-b>", "<Control-Key-B>",
+        ]:
+            self.bind_all(pattern, lambda e: (self.toggle_sidebar(), "break")[1])
+
+        for pattern in ["<Control-f>", "<Control-F>", "<Control-Key-f>", "<Control-Key-F>"]:
+            self.bind_all(pattern, lambda e: (self.focus_search(), "break")[1])
+
+        for pattern in ["<Control-r>", "<Control-R>", "<Control-Key-r>", "<Control-Key-R>", "<F5>"]:
+            self.bind_all(pattern, lambda e: (self.refresh_active_view(), "break")[1])
+
+        for pattern in ["<Control-n>", "<Control-N>", "<Control-Key-n>", "<Control-Key-N>"]:
+            self.bind_all(pattern, lambda e: (self.trigger_new_record(), "break")[1])
+
+        for pattern in ["<F1>", "<Control-h>", "<Control-H>", "<Control-Key-h>", "<Control-Key-H>"]:
+            self.bind_all(pattern, lambda e: (self.show_shortcuts_modal(), "break")[1])
+
+        for pattern in ["<Control-u>", "<Control-U>", "<Control-Key-u>", "<Control-Key-U>"]:
+            self.bind_all(pattern, lambda e: (self.navigate("users"), "break")[1])
+
+        self.bind_all("<Escape>", lambda e: (self._handle_escape(), "break")[1])
+
+        # Page jump hotkeys (Ctrl+1 .. Ctrl+0)
+        nav_map = {
+            "1": "dashboard",
+            "2": "medicines",
+            "3": "categories",
+            "4": "inventory",
+            "5": "sales",
+            "6": "purchases",
+            "7": "suppliers",
+            "8": "customers",
+            "9": "reports",
+            "0": "settings",
+        }
+        for num, view_key in nav_map.items():
+            for pat in [f"<Control-Key-{num}>", f"<Control-{num}>", f"<Control-KP_{num}>"]:
+                self.bind_all(pat, lambda e, vk=view_key: (self.navigate(vk), "break")[1])
+
+    def _is_entry_focused(self) -> bool:
+        try:
+            focused = self.focus_get()
+            if not focused:
+                return False
+            cls = focused.winfo_class().lower()
+            return "entry" in cls or "text" in cls
+        except Exception:
+            return False
+
+    def _on_global_key_press(self, event):
+        keysym = event.keysym
+        is_ctrl = bool(event.state & 4)
+        is_entry = self._is_entry_focused()
+
+        # Handle global hotkeys that ignore text focus:
+        if is_ctrl:
+            k = keysym.lower()
+            if k == 'b':
+                self.toggle_sidebar()
+                return "break"
+            elif k == 'f':
+                self.focus_search()
+                return "break"
+            elif k == 'r':
+                self.refresh_active_view()
+                return "break"
+            elif k == 'n':
+                self.trigger_new_record()
+                return "break"
+            elif k == 'h':
+                self.show_shortcuts_modal()
+                return "break"
+            elif k == 'u':
+                self.navigate("users")
+                return "break"
+            elif k in "1234567890":
+                mapping = {
+                    "1": "dashboard",
+                    "2": "medicines",
+                    "3": "categories",
+                    "4": "inventory",
+                    "5": "sales",
+                    "6": "purchases",
+                    "7": "suppliers",
+                    "8": "customers",
+                    "9": "reports",
+                    "0": "settings",
+                }
+                if k in mapping:
+                    self.navigate(mapping[k])
+                    return "break"
+
+        # Keypad numbers with Ctrl
+        if is_ctrl and keysym.startswith("KP_"):
+            kp_digit = keysym.replace("KP_", "")
+            mapping = {
+                "1": "dashboard",
+                "2": "medicines",
+                "3": "categories",
+                "4": "inventory",
+                "5": "sales",
+                "6": "purchases",
+                "7": "suppliers",
+                "8": "customers",
+                "9": "reports",
+                "0": "settings",
+            }
+            if kp_digit in mapping:
+                self.navigate(mapping[kp_digit])
+                return "break"
+
+        if keysym == "F1":
+            self.show_shortcuts_modal()
+            return "break"
+        elif keysym == "F5":
+            self.refresh_active_view()
+            return "break"
+        elif keysym == "Escape":
+            self._handle_escape()
+            return "break"
+        elif keysym == "Up" and not is_entry:
+            self._navigate_sidebar_arrow(-1)
+            return "break"
+        elif keysym == "Down" and not is_entry:
+            self._navigate_sidebar_arrow(1)
+            return "break"
+
+    def focus_search(self):
+        if hasattr(self, "top_header") and hasattr(self.top_header, "search_entry"):
+            self.top_header.search_entry.focus_set()
+            try:
+                self.top_header.search_entry.select_range(0, "end")
+            except Exception:
+                pass
+
+    def refresh_active_view(self):
+        if not self.current_view_widget:
+            return
+        if hasattr(self.current_view_widget, "_load_data"):
+            self.current_view_widget._load_data()
+        elif hasattr(self.current_view_widget, "load_batches"):
+            self.current_view_widget.load_batches()
+        elif hasattr(self.current_view_widget, "_fetch_data"):
+            self.current_view_widget._fetch_data()
+        elif hasattr(self.current_view_widget, "_load_dashboard"):
+            self.current_view_widget._load_dashboard()
+
+    def trigger_new_record(self):
+        if not self.current_view_widget:
+            return
+        if hasattr(self.current_view_widget, "_open_add_modal"):
+            self.current_view_widget._open_add_modal()
+        elif hasattr(self.current_view_widget, "_open_receive_modal"):
+            self.current_view_widget._open_receive_modal()
+        elif hasattr(self.current_view_widget, "_open_new_bill_modal"):
+            self.current_view_widget._open_new_bill_modal()
+        elif self.current_view_key == "dashboard":
+            self.navigate("medicines")
+            if hasattr(self.current_view_widget, "_open_add_modal"):
+                self.current_view_widget._open_add_modal()
+
+    def show_shortcuts_modal(self):
+        from app.ui.components.dialogs import ShortcutsModal
+        ShortcutsModal(self)
+
+    def _handle_escape(self):
+        try:
+            focused = self.focus_get()
+            if focused:
+                self.focus_set()
+        except Exception:
+            pass
+
+    def _navigate_sidebar_arrow(self, direction: int):
+        keys = [item[0] for item in self.nav_items]
+        try:
+            curr_idx = keys.index(self.current_view_key)
+        except ValueError:
+            curr_idx = 0
+        new_idx = (curr_idx + direction) % len(keys)
+        self.navigate(keys[new_idx])
 
     def _handle_global_search(self, query: str):
         self.navigate("medicines")
@@ -349,26 +525,9 @@ class MainWindow(ctk.CTk):
                 on_theme_change=self._on_accessibility_change
             )
         elif key == "sales":
-            self.current_view_widget = RoadmapView(
+            self.current_view_widget = BillingView(
                 self.view_container,
-                module_name="Point of Sale & Billing (Dispensing)",
-                icon="🧾",
-                milestone="Phase 2 Sprint — POS Service Migration",
-                overview="Handles patient checkout, barcode scanning, prescription itemization, and automated FIFO batch deduction.",
-                schema_info=[
-                    {"table": "sales", "desc": "Receipt header, total amount, discount, tax, payment mode, cashier ID"},
-                    {"table": "sale_items", "desc": "Line item medicine ID, deducted batch ID, unit quantity, sold price"}
-                ],
-                planned_endpoints=[
-                    "POST /api/v1/sales/checkout (Atomic transaction)",
-                    "GET /api/v1/sales/today (Daily reconciliations)",
-                    "GET /api/v1/sales/receipt/{id} (PDF printing)"
-                ],
-                tqm_safeguards=[
-                    "Poka-yoke: Prevents dispensing expired or quarantined lots",
-                    "FIFO stock depletion: Automatically allocates oldest non-expired batches first",
-                    "Decimal arithmetic prevents floating point rounding errors"
-                ]
+                self.api_client
             )
         elif key == "purchases":
             self.current_view_widget = RoadmapView(

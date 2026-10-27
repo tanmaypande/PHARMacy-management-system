@@ -137,3 +137,38 @@ class APIClient:
         url = f"{self.base_url}/api/v1/batches/expiring-soon?days={days}"
         res = requests.get(url, headers=self._headers(), timeout=self.timeout)
         return self._handle_response(res)
+
+    # Point of Sale & Dispensing Billing
+    def create_sale(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/sales"
+        res = requests.post(url, json=payload, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def list_sales(self, limit: int = 50, offset: int = 0, search: Optional[str] = None) -> List[Dict[str, Any]]:
+        url = f"{self.base_url}/api/v1/sales?limit={limit}&offset={offset}"
+        if search:
+            url += f"&search={requests.utils.quote(search)}"
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def get_sale(self, sale_id: str) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/sales/{sale_id}"
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def get_sale_by_invoice(self, invoice_number: str) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/sales/invoice/{invoice_number}"
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def get_today_sales_summary(self) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/sales/summary/today"
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def get_available_batches_for_sale(self, medicine_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        url = f"{self.base_url}/api/v1/sales/batches/available"
+        if medicine_id:
+            url += f"?medicine_id={medicine_id}"
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
