@@ -24,7 +24,8 @@ class AccessibilityManager:
         return cls._instance
 
     def _init_manager(self):
-        self.listeners: List[Callable[[], None]] = []
+        self.listeners: List[Callable[..., None]] = []
+        self._font_cache: Dict[tuple, ctk.CTkFont] = {}
         self.config: Dict[str, Any] = {
             "appearance_mode": "light",     # light by default, dark, high-contrast
             "font_scale": 1.0,              # 1.0 (normal), 1.15 (large), 1.3 (extra large)
@@ -64,7 +65,7 @@ class AccessibilityManager:
         self.config["high_contrast"] = (mode == "high-contrast")
         self._apply_ctk_mode()
         self.save_config()
-        self.notify_listeners()
+        self.notify_listeners("theme")
 
     def toggle_mode(self):
         current = self.config.get("appearance_mode", "light")
@@ -72,16 +73,43 @@ class AccessibilityManager:
         self.set_appearance_mode(new_mode)
 
     def set_font_scale(self, scale: float):
-        self.config["font_scale"] = round(scale, 2)
+        scale = round(float(scale), 2)
+        self.config["font_scale"] = scale
         self.save_config()
-        self.notify_listeners()
+
+        # Dynamically reconfigure all live shared CTkFont objects across the entire application
+        for (family, base_size, weight, slant), font_obj in list(self._font_cache.items()):
+            try:
+                new_size = self.get_font_size(base_size)
+                font_obj.configure(size=new_size)
+            except Exception:
+                pass
+
+        self.notify_listeners("font_scale")
 
     def get_font_size(self, base_size: int) -> int:
         scale = self.config.get("font_scale", 1.0)
         return int(base_size * scale)
 
-    def get_font(self, base_size: int = 14, weight: str = "normal", slant: str = "roman") -> ctk.CTkFont:
-        return ctk.CTkFont(family="Segoe UI", size=self.get_font_size(base_size), weight=weight, slant=slant)
+    def get_font(
+        self,
+        base_size: int = 14,
+        weight: str = "normal",
+        slant: str = "roman",
+        family: str = "Segoe UI"
+    ) -> ctk.CTkFont:
+        key = (family, base_size, weight, slant)
+        if key in self._font_cache:
+            return self._font_cache[key]
+
+        font_obj = ctk.CTkFont(
+            family=family,
+            size=self.get_font_size(base_size),
+            weight=weight,
+            slant=slant
+        )
+        self._font_cache[key] = font_obj
+        return font_obj
 
     def get_card_fg(self):
         if self.config.get("appearance_mode") == "high-contrast":
@@ -101,10 +129,15 @@ class AccessibilityManager:
         if callback in self.listeners:
             self.listeners.remove(callback)
 
-    def notify_listeners(self):
-        for listener in self.listeners:
+    def notify_listeners(self, event: str = "general"):
+        import inspect
+        for listener in list(self.listeners):
             try:
-                listener()
+                sig = inspect.signature(listener)
+                if len(sig.parameters) > 0:
+                    listener(event)
+                else:
+                    listener()
             except Exception:
                 pass
 

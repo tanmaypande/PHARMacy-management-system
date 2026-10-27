@@ -401,7 +401,7 @@ class MedicineView(ctk.CTkFrame):
         return ctk.CTkLabel(
             parent,
             text=str(val or "—"),
-            font=ctk.CTkFont(family="Consolas", size=accessibility_manager.get_font_size(12), weight="bold"),
+            font=accessibility_manager.get_font(12, weight="bold", family="Consolas"),
             text_color=Theme.PRIMARY,
             anchor="w"
         )

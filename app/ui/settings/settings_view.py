@@ -141,6 +141,37 @@ class SettingsView(ctk.CTkFrame):
 
         ctk.CTkLabel(slider_box, text="140%", font=accessibility_manager.get_font(12, weight="bold"), text_color=Theme.TEXT_MUTED).pack(side="left")
 
+        # Quick Preset Buttons
+        presets_box = ctk.CTkFrame(card_font, fg_color="transparent")
+        presets_box.pack(fill="x", padx=20, pady=(0, 14))
+
+        ctk.CTkLabel(
+            presets_box,
+            text="Quick Presets:",
+            font=accessibility_manager.get_font(12, weight="bold"),
+            text_color=Theme.TEXT_MUTED
+        ).pack(side="left", padx=(0, 8))
+
+        presets = [
+            (1.0, "100% Standard"),
+            (1.1, "110% Medium"),
+            (1.2, "120% Large"),
+            (1.3, "130% Extra Large"),
+            (1.4, "140% Maximum")
+        ]
+        for scale_val, label in presets:
+            ctk.CTkButton(
+                presets_box,
+                text=label,
+                height=30,
+                corner_radius=8,
+                fg_color=Theme.SECONDARY,
+                hover_color=Theme.SECONDARY_HOVER,
+                text_color=Theme.SECONDARY_TEXT,
+                font=accessibility_manager.get_font(11, weight="bold"),
+                command=lambda v=scale_val: self._set_preset(v)
+            ).pack(side="left", padx=4)
+
         # Live Font Preview Box
         preview_box = ctk.CTkFrame(card_font, fg_color=Theme.BG_MUTED, corner_radius=8)
         preview_box.pack(fill="x", padx=20, pady=(0, 16))
@@ -204,12 +235,15 @@ class SettingsView(ctk.CTkFrame):
         new_mode = self.theme_var.get()
         accessibility_manager.set_appearance_mode(new_mode)
         if self.on_theme_change:
-            self.on_theme_change()
+            self.on_theme_change("theme")
 
-    def _on_slider_change(self, val):
-        pct = int(val * 100)
+    def _set_preset(self, val: float):
+        self.slider.set(val)
+        self._on_slider_change(val)
+
+    def _on_slider_change(self, val: float):
+        pct = int(round(val * 100))
         self.scale_badge.update_text(f"{pct}% Scale")
         accessibility_manager.set_font_scale(val)
-        self.lbl_preview.configure(font=accessibility_manager.get_font(13))
         if self.on_theme_change:
-            self.on_theme_change()
+            self.on_theme_change("font_scale")

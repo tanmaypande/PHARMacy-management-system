@@ -46,7 +46,7 @@ class StatCard(ctk.CTkFrame):
         ctk.CTkLabel(
             icon_box,
             text=icon,
-            font=ctk.CTkFont(size=accessibility_manager.get_font_size(18))
+            font=accessibility_manager.get_font(18)
         ).pack(expand=True)
 
         # Title / Category in uppercase subtle text

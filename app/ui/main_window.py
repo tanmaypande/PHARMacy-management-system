@@ -99,7 +99,7 @@ class MainWindow(ctk.CTk):
         self.lbl_logo_icon = ctk.CTkLabel(
             logo_badge,
             text="🏥",
-            font=ctk.CTkFont(size=18)
+            font=accessibility_manager.get_font(18)
         )
         self.lbl_logo_icon.pack(expand=True)
 
@@ -229,7 +229,7 @@ class MainWindow(ctk.CTk):
             for key, btn in self.nav_buttons.items():
                 icon = next(item[1] for item in self.nav_items if item[0] == key)
                 btn.configure(text=icon, anchor="center", width=44)
-            self.lbl_sidebar_status.configure(text="●", font=ctk.CTkFont(size=16))
+            self.lbl_sidebar_status.configure(text="●", font=accessibility_manager.get_font(16))
         else:
             self.lbl_logo_text.pack(side="left")
             self.lbl_logo_sub.pack(anchor="w", padx=(34, 0), pady=(1, 0))
@@ -509,9 +509,12 @@ class MainWindow(ctk.CTk):
             dot_color = "#34D399" if (api_ok and db_ok) else ("#F87171" if api_ok else "#EF4444")
             self.lbl_sidebar_status.configure(text="●", text_color=dot_color)
 
-    def _on_accessibility_change(self):
+    def _on_accessibility_change(self, event="theme"):
         self.configure(fg_color=Theme.BG_APP)
-        self.navigate(self.current_view_key)
+        if event == "theme":
+            self.navigate(self.current_view_key)
+        else:
+            self.update_idletasks()
 
     def destroy(self):
         self._monitor_running = False

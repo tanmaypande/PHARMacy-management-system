@@ -33,11 +33,15 @@ class StatusBadge(ctk.CTkFrame):
             text_col = Theme.TEXT_MUTED
             prefix = "○ "
 
+        self.prefix = prefix
         self.configure(fg_color=bg_col)
         self.label = ctk.CTkLabel(
             self,
-            text=f"{prefix}{text}",
+            text=f"{self.prefix}{text}",
             font=accessibility_manager.get_font(11, weight="bold"),
             text_color=text_col
         )
         self.label.pack(padx=8, pady=3)
+
+    def update_text(self, text: str):
+        self.label.configure(text=f"{self.prefix}{text}")

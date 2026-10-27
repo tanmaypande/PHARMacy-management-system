@@ -48,6 +48,27 @@ def test_accessibility_manager_font_scaling():
     accessibility_manager.set_font_scale(initial_scale)
 
 
+def test_live_font_cache_reconfiguration():
+    """Verify that cached CTkFont instances are live-reconfigured when font scale changes."""
+    import customtkinter as ctk
+    # Requires Tk root context for CTkFont
+    root = ctk.CTk()
+    try:
+        accessibility_manager.set_font_scale(1.0)
+        font_obj = accessibility_manager.get_font(14)
+        assert font_obj.cget("size") == 14
+
+        # Scale up to 1.3
+        accessibility_manager.set_font_scale(1.3)
+        assert font_obj.cget("size") == 18  # int(14 * 1.3) = 18
+
+        # Restore
+        accessibility_manager.set_font_scale(1.0)
+        assert font_obj.cget("size") == 14
+    finally:
+        root.destroy()
+
+
 def test_accessibility_manager_theme_mode():
     """Verify theme switching and high contrast overrides."""
     initial_mode = accessibility_manager.config.get("appearance_mode", "light")

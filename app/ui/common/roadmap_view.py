@@ -101,7 +101,7 @@ class RoadmapView(ctk.CTkFrame):
         for item in self.schema_info:
             row = ctk.CTkFrame(schema_card, fg_color=Theme.BG_MUTED, corner_radius=6)
             row.pack(fill="x", padx=16, pady=3)
-            ctk.CTkLabel(row, text=item["table"], width=130, anchor="w", font=ctk.CTkFont(family="Consolas", size=accessibility_manager.get_font_size(11), weight="bold"), text_color=Theme.PRIMARY).pack(side="left", padx=8, pady=6)
+            ctk.CTkLabel(row, text=item["table"], width=130, anchor="w", font=accessibility_manager.get_font(11, weight="bold", family="Consolas"), text_color=Theme.PRIMARY).pack(side="left", padx=8, pady=6)
             ctk.CTkLabel(row, text=item["desc"], font=accessibility_manager.get_font(11), text_color=Theme.TEXT_MUTED).pack(side="left", padx=4)
 
         ctk.CTkLabel(schema_card, text="", height=4).pack()
@@ -121,7 +121,7 @@ class RoadmapView(ctk.CTkFrame):
             row = ctk.CTkFrame(api_card, fg_color=Theme.BG_MUTED, corner_radius=6)
             row.pack(fill="x", padx=16, pady=3)
             ctk.CTkLabel(row, text="●", text_color=Theme.INFO_TEXT, width=16).pack(side="left", padx=(8, 2))
-            ctk.CTkLabel(row, text=ep, font=ctk.CTkFont(family="Consolas", size=accessibility_manager.get_font_size(11)), text_color=Theme.TEXT_MAIN).pack(side="left", pady=6)
+            ctk.CTkLabel(row, text=ep, font=accessibility_manager.get_font(11, family="Consolas"), text_color=Theme.TEXT_MAIN).pack(side="left", pady=6)
 
         ctk.CTkLabel(api_card, text="", height=4).pack()
 

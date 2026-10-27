@@ -162,7 +162,7 @@ class TopHeader(ctk.CTkFrame):
         avatar_box = ctk.CTkLabel(
             user_card,
             text="🧑‍⚕️",
-            font=ctk.CTkFont(size=accessibility_manager.get_font_size(15))
+            font=accessibility_manager.get_font(15)
         )
         avatar_box.pack(side="left", padx=(8, 4), pady=4)
 
