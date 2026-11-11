@@ -75,5 +75,23 @@ class CustomerService:
         c = self.repo.get_by_id(uuid.UUID(customer_id))
         if not c:
             raise ValueError("Customer not found.")
+
+        # Check if customer has associated sales or prescriptions
+        from app.models.sale import Sale
+        from app.models.prescription import Prescription
+        from sqlalchemy import select
+
+        has_sales = self.db.scalar(select(Sale.id).where(Sale.customer_id == c.id).limit(1))
+        has_rx = self.db.scalar(select(Prescription.id).where(Prescription.customer_id == c.id).limit(1))
+
+        if has_sales:
+            # Cannot hard delete patient with sales transaction history: nullify or preserve
+            raise ValueError(f"Cannot delete patient '{c.name}' because billing invoices exist in audit records.")
+
+        if has_rx:
+            # Delete prescriptions first if any exist
+            for rx in c.prescriptions:
+                self.db.delete(rx)
+
         self.repo.delete(c)
         self.audit.log_action(actor, "DELETE_CUSTOMER", "Customer", str(c.id), f"Deleted patient {c.name}")

@@ -1,0 +1,2 @@
+-- MediCare PMS Logical Snapshot created at 2026-11-11T11:05:56.299298
+-- Database: pharmacy_management (PostgreSQL 18)

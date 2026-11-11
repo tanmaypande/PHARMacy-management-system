@@ -94,5 +94,21 @@ class SupplierService:
         s = self.repo.get_by_id(uuid.UUID(supplier_id))
         if not s:
             raise ValueError("Supplier not found.")
+
+        # Check if supplier has historical batches or purchases
+        from app.models.batch import MedicineBatch
+        from app.models.purchase import Purchase
+        from sqlalchemy import select
+
+        has_batches = self.db.scalar(select(MedicineBatch.id).where(MedicineBatch.supplier_id == s.id).limit(1))
+        has_purchases = self.db.scalar(select(Purchase.id).where(Purchase.supplier_id == s.id).limit(1))
+
+        if has_batches or has_purchases:
+            # Soft-deactivate to protect transactional history and foreign keys
+            s.is_active = False
+            self.repo.update(s)
+            self.audit.log_action(actor, "DEACTIVATE_SUPPLIER", "Supplier", str(s.id), f"Deactivated supplier {s.name} (has purchase/inventory history)")
+            return
+
         self.repo.delete(s)
         self.audit.log_action(actor, "DELETE_SUPPLIER", "Supplier", str(s.id), f"Deleted supplier {s.name}")
