@@ -1,0 +1,27 @@
+==============================================
+         MEDICARE PHARMACY & CLINIC          
+     Licensed Pharmaceutical Dispensary      
+         Tel: +1 (555) 019-2834              
+==============================================
+ Invoice No : INV-20261028-0005
+ Date/Time  : 28 Oct 2026, 11:03 AM
+ Cashier    : Pharmacist
+ Patient    : Walk-in Patient
+ Contact    : —
+----------------------------------------------
+Item / Lot                Qty   Price    Total
+----------------------------------------------
+Hydrocortisone 1% Crea      1 2878.00  2878.00
+  Lot: LOT-DUPLICATE (Exp: 2027-01-18)
+----------------------------------------------
+Subtotal:                      ₹      2878.00
+Discount (45.00%):             -₹     1295.10
+Tax / GST (5.00%):             +₹       79.15
+==============================================
+GRAND TOTAL:                 ₹        1662.05
+Payment Tendered:               UPI / Digital
+==============================================
+        THANK YOU FOR TRUSTING MEDICARE       
+   Please keep this receipt for prescription  
+              records & refills               
+==============================================

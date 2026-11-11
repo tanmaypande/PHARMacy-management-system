@@ -138,3 +138,16 @@ class MedicineService:
             )
         updated = self.repo.update(med, {"is_active": False})
         return self._to_response(updated)
+
+    def delete_medicine(self, medicine_id: uuid.UUID) -> dict:
+        med = self.repo.get_by_id(medicine_id)
+        if not med:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Medicine with ID '{medicine_id}' was not found"
+            )
+        if med.batches and len(med.batches) > 0:
+            self.repo.update(med, {"is_active": False})
+            return {"message": "Product has inventory stock history; catalog status archived/deactivated.", "deleted": False}
+        self.repo.delete(med)
+        return {"message": "Product completely removed from pharmaceutical formulary.", "deleted": True}

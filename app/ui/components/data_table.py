@@ -255,7 +255,22 @@ class DataTable(ctk.CTkFrame):
                 formatter = col.get("formatter")
 
                 if formatter:
-                    cell_widget = formatter(row_frame, raw_val, row_data)
+                    try:
+                        cell_res = formatter(row_frame, raw_val, row_data)
+                    except TypeError:
+                        cell_res = formatter(raw_val)
+
+                    if hasattr(cell_res, "grid"):
+                        cell_widget = cell_res
+                    else:
+                        text_str = str(cell_res) if cell_res is not None else "—"
+                        cell_widget = ctk.CTkLabel(
+                            row_frame,
+                            text=text_str,
+                            font=accessibility_manager.get_font(12),
+                            text_color=Theme.TEXT_MAIN,
+                            anchor=align
+                        )
                     cell_widget.grid(row=0, column=col_idx, sticky="ew", padx=6, pady=4)
                 else:
                     text_str = str(raw_val) if raw_val is not None else "—"

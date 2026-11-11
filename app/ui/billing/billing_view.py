@@ -160,8 +160,8 @@ class CustomerReceiptModal(ctk.CTkToplevel):
 
             ctk.CTkLabel(row, text=exp_date, width=80, anchor="center", font=accessibility_manager.get_font(10), text_color=Theme.TEXT_MUTED).pack(side="left")
             ctk.CTkLabel(row, text=str(qty), width=45, anchor="center", font=accessibility_manager.get_font(11), text_color=Theme.TEXT_MAIN).pack(side="left")
-            ctk.CTkLabel(row, text=f"${price:.2f}", width=70, anchor="e", font=accessibility_manager.get_font(11), text_color=Theme.TEXT_MAIN).pack(side="left")
-            ctk.CTkLabel(row, text=f"${subtotal:.2f}", width=80, anchor="e", font=accessibility_manager.get_font(11, weight="bold"), text_color=Theme.TEXT_MAIN).pack(side="right", padx=8)
+            ctk.CTkLabel(row, text=f"₹{price:.2f}", width=70, anchor="e", font=accessibility_manager.get_font(11), text_color=Theme.TEXT_MAIN).pack(side="left")
+            ctk.CTkLabel(row, text=f"₹{subtotal:.2f}", width=80, anchor="e", font=accessibility_manager.get_font(11, weight="bold"), text_color=Theme.TEXT_MAIN).pack(side="right", padx=8)
 
         # Divider
         ctk.CTkFrame(card, fg_color=Theme.BORDER, height=1).pack(fill="x", padx=20, pady=6)
@@ -186,17 +186,17 @@ class CustomerReceiptModal(ctk.CTkToplevel):
             ctk.CTkLabel(f_row, text=label, width=140, anchor="e", font=accessibility_manager.get_font(11, weight="bold" if bold else "normal"), text_color=Theme.TEXT_MUTED).pack(side="left")
             ctk.CTkLabel(f_row, text=amount_str, width=100, anchor="e", font=accessibility_manager.get_font(12 if not bold else 16, weight="bold" if bold else "normal"), text_color=color).pack(side="right")
 
-        _add_fin_line("Subtotal:", f"${sub_val:.2f}")
+        _add_fin_line("Subtotal:", f"₹{sub_val:.2f}")
         if disc_val > 0:
-            _add_fin_line(f"Discount ({disc_pct}%):", f"-${disc_val:.2f}", color=Theme.DANGER_TEXT)
+            _add_fin_line(f"Discount ({disc_pct}%):", f"-₹{disc_val:.2f}", color=Theme.DANGER_TEXT)
         if tax_val > 0:
-            _add_fin_line(f"Tax / GST ({tax_pct}%):", f"+${tax_val:.2f}")
+            _add_fin_line(f"Tax / GST ({tax_pct}%):", f"+₹{tax_val:.2f}")
 
         # Grand Total Pill
         grand_row = ctk.CTkFrame(fin_right, fg_color=Theme.BG_MUTED, corner_radius=8)
         grand_row.pack(anchor="e", pady=(4, 0))
         ctk.CTkLabel(grand_row, text="GRAND TOTAL:", font=accessibility_manager.get_font(13, weight="bold"), text_color=Theme.PRIMARY).pack(side="left", padx=10, pady=6)
-        ctk.CTkLabel(grand_row, text=f"${tot_val:.2f}", font=accessibility_manager.get_font(17, weight="bold"), text_color=Theme.TEXT_MAIN).pack(side="right", padx=10, pady=6)
+        ctk.CTkLabel(grand_row, text=f"₹{tot_val:.2f}", font=accessibility_manager.get_font(17, weight="bold"), text_color=Theme.TEXT_MAIN).pack(side="right", padx=10, pady=6)
 
         # 5. Modal Footer Action Buttons
         bot_buttons = ctk.CTkFrame(container, fg_color="transparent")
@@ -243,11 +243,21 @@ class CustomerReceiptModal(ctk.CTkToplevel):
 
     def _save_receipt_file(self):
         inv_no = self.sale_dict.get("invoice_number", "RECEIPT")
+        pdf_path = f"receipt_{inv_no}.pdf"
+        txt_path = f"receipt_{inv_no}.txt"
+        from app.utils.pdf_utils import generate_invoice_pdf
         receipt_text = InvoiceGenerator.generate_ascii_receipt(self.sale_dict)
-        filename = f"receipt_{inv_no}.txt"
         try:
-            with open(filename, "w", encoding="utf-8") as f:
+            # Generate both PDF and text versions
+            with open(txt_path, "w", encoding="utf-8") as f:
                 f.write(receipt_text)
+            generate_invoice_pdf(self.sale_dict, pdf_path)
+            self.btn_export.configure(text=f"✓ Saved ({pdf_path})")
+            import tkinter.messagebox as msg
+            msg.showinfo("Invoice Generated", f"Printable PDF invoice successfully generated at:\n{pdf_path}")
+        except Exception as e:
+            self.btn_export.configure(text="Error Saving")
+            print("Export error:", e)
             self.btn_export.configure(text=f"✓ Saved ({filename})")
         except Exception as e:
             self.btn_export.configure(text="Error saving receipt")
@@ -270,6 +280,7 @@ class NewBillModal(ctk.CTkToplevel):
         self.on_success = on_success
 
         self.available_batches: List[Dict[str, Any]] = []
+        self.filtered_batches: List[Dict[str, Any]] = []
         self.cart_items: List[Dict[str, Any]] = []
 
         self.title("New Prescription Dispensation & Bill (Checkout)")
@@ -339,17 +350,69 @@ class NewBillModal(ctk.CTkToplevel):
         )
         self.payment_opt.pack(fill="x", pady=(2, 0))
 
-        # Middle Section: Medicine & Lot Picker Bar
+        # Middle Section: Medicine & Lot Picker Bar with Responsive Search
         add_card = ctk.CTkFrame(main_box, fg_color=Theme.BG_CARD, corner_radius=10, border_width=1, border_color=Theme.BORDER)
         add_card.pack(fill="x", pady=(0, 10))
 
-        picker_row = ctk.CTkFrame(add_card, fg_color="transparent")
-        picker_row.pack(fill="x", padx=14, pady=10)
+        # 1. Responsive Real-Time Medicine Search Bar
+        search_box = ctk.CTkFrame(add_card, fg_color="transparent")
+        search_box.pack(fill="x", padx=14, pady=(10, 4))
 
-        # Batch Lot Selection Menu
+        search_hdr = ctk.CTkFrame(search_box, fg_color="transparent")
+        search_hdr.pack(fill="x", pady=(0, 2))
+
+        ctk.CTkLabel(
+            search_hdr,
+            text="🔍 Responsive Medicine & Batch Search (Filter in Real-time) *",
+            font=accessibility_manager.get_font(11, weight="bold"),
+            text_color=Theme.TEXT_MAIN
+        ).pack(side="left")
+
+        self.lbl_search_match = ctk.CTkLabel(
+            search_hdr,
+            text="",
+            font=accessibility_manager.get_font(10),
+            text_color=Theme.PRIMARY
+        )
+        self.lbl_search_match.pack(side="right")
+
+        search_input_row = ctk.CTkFrame(search_box, fg_color="transparent")
+        search_input_row.pack(fill="x")
+
+        self.entry_med_search = ctk.CTkEntry(
+            search_input_row,
+            placeholder_text="Type brand name, generic formula, SKU or Batch Lot to filter instantly...",
+            height=34,
+            corner_radius=Theme.RADIUS_INPUT,
+            border_color=Theme.BORDER,
+            font=accessibility_manager.get_font(12)
+        )
+        self.entry_med_search.pack(side="left", fill="x", expand=True, padx=(0, 6))
+        self.entry_med_search.bind("<KeyRelease>", self._on_search_key_release)
+        self.entry_med_search.bind("<Return>", self._on_search_enter)
+
+        self.btn_clear_med_search = ctk.CTkButton(
+            search_input_row,
+            text="✕ Clear",
+            width=68,
+            height=34,
+            corner_radius=Theme.RADIUS_BUTTON,
+            fg_color=Theme.SECONDARY,
+            hover_color=Theme.SECONDARY_HOVER,
+            text_color=Theme.TEXT_MUTED,
+            font=accessibility_manager.get_font(11),
+            command=self._clear_med_search
+        )
+        self.btn_clear_med_search.pack(side="right")
+
+        # 2. Picker Row with Selected Lot Dropdown, Qty, Price and Add Button
+        picker_row = ctk.CTkFrame(add_card, fg_color="transparent")
+        picker_row.pack(fill="x", padx=14, pady=(4, 10))
+
+        # Batch Lot Selection Menu (Dynamically populated from search results)
         col_picker = ctk.CTkFrame(picker_row, fg_color="transparent")
         col_picker.pack(side="left", fill="x", expand=True, padx=(0, 10))
-        ctk.CTkLabel(col_picker, text="Select Medicine & Lot (Stock > 0 & Non-Expired) *", font=accessibility_manager.get_font(11, weight="bold"), text_color=Theme.TEXT_MAIN).pack(anchor="w")
+        ctk.CTkLabel(col_picker, text="Matching Lots (Stock > 0 & Non-Expired)", font=accessibility_manager.get_font(10), text_color=Theme.TEXT_MUTED).pack(anchor="w")
 
         self.batch_var = ctk.StringVar(value="Loading pharmaceutical inventory...")
         self.batch_opt = ctk.CTkOptionMenu(
@@ -369,19 +432,21 @@ class NewBillModal(ctk.CTkToplevel):
         self.entry_qty = ctk.CTkEntry(col_qty, width=75, height=34, border_color=Theme.BORDER, font=accessibility_manager.get_font(12))
         self.entry_qty.pack(pady=(2, 0))
         self.entry_qty.insert(0, "1")
+        self.entry_qty.bind("<Return>", lambda e: self._add_item_to_cart())
 
         # Price Input
         col_price = ctk.CTkFrame(picker_row, fg_color="transparent", width=95)
         col_price.pack(side="left", padx=(0, 10))
-        ctk.CTkLabel(col_price, text="Price ($)", font=accessibility_manager.get_font(11, weight="bold"), text_color=Theme.TEXT_MAIN).pack(anchor="w")
+        ctk.CTkLabel(col_price, text="Price (₹)", font=accessibility_manager.get_font(11, weight="bold"), text_color=Theme.TEXT_MAIN).pack(anchor="w")
         self.entry_price = ctk.CTkEntry(col_price, width=90, height=34, border_color=Theme.BORDER, font=accessibility_manager.get_font(12))
         self.entry_price.pack(pady=(2, 0))
         self.entry_price.insert(0, "0.00")
+        self.entry_price.bind("<Return>", lambda e: self._add_item_to_cart())
 
         # Add to Cart Button
         col_add_btn = ctk.CTkFrame(picker_row, fg_color="transparent")
         col_add_btn.pack(side="right", padx=(4, 0))
-        ctk.CTkLabel(col_add_btn, text=" ", font=accessibility_manager.get_font(11)).pack()
+        ctk.CTkLabel(col_add_btn, text=" ", font=accessibility_manager.get_font(10)).pack()
         ctk.CTkButton(
             col_add_btn,
             text="➕ Add to Bill",
@@ -457,7 +522,7 @@ class NewBillModal(ctk.CTkToplevel):
 
         self.lbl_subtotal_display = ctk.CTkLabel(
             fin_right,
-            text="Subtotal: $0.00",
+            text="Subtotal: ₹0.00",
             font=accessibility_manager.get_font(11),
             text_color=Theme.TEXT_MUTED
         )
@@ -465,7 +530,7 @@ class NewBillModal(ctk.CTkToplevel):
 
         self.lbl_net_total = ctk.CTkLabel(
             fin_right,
-            text="Payable: $0.00",
+            text="Payable: ₹0.00",
             font=accessibility_manager.get_font(18, weight="bold"),
             text_color=Theme.PRIMARY
         )
@@ -513,37 +578,90 @@ class NewBillModal(ctk.CTkToplevel):
 
     def _populate_batches(self, batches: List[Dict[str, Any]]):
         self.available_batches = batches
+        self.filtered_batches = list(batches)
         if not batches:
             self.batch_opt.configure(values=["No available stock lots found"])
             self.batch_var.set("No available stock lots found")
+            self.lbl_search_match.configure(text="0 lots available")
             return
 
-        options = []
-        for b in batches:
-            label = f"{b['medicine_name']}  (Lot: {b['batch_number']} | Exp: {b['expiry_date']} | Stock: {b['available_quantity']} | ${b['selling_price']:.2f})"
-            options.append(label)
+        self.lbl_search_match.configure(text=f"{len(batches)} available lots")
+        self._update_picker_options()
+
+    def _update_picker_options(self):
+        if not self.filtered_batches:
+            self.batch_opt.configure(values=["No matching lots found - check spelling"])
+            self.batch_var.set("No matching lots found - check spelling")
+            self.entry_price.delete(0, "end")
+            self.entry_price.insert(0, "0.00")
+            return
+
+        display_batches = self.filtered_batches[:50]
+        options = [
+            f"{b.get('medicine_name', 'Medicine')}  (Lot: {b.get('batch_number', 'N/A')} | Exp: {b.get('expiry_date', 'N/A')} | Stock: {b.get('available_quantity', b.get('quantity', 0))} | ₹{float(b.get('selling_price', 0)):.2f})"
+            for b in display_batches
+        ]
+        if len(self.filtered_batches) > 50:
+            options.append(f"... and {len(self.filtered_batches) - 50} more lots (refine search)")
 
         self.batch_opt.configure(values=options)
         self.batch_var.set(options[0])
         self._on_batch_selected(options[0])
 
+    def _on_search_key_release(self, event=None):
+        query = self.entry_med_search.get().strip().lower()
+        if not query:
+            self.filtered_batches = list(self.available_batches)
+            self.lbl_search_match.configure(text=f"{len(self.available_batches)} available lots")
+        else:
+            self.filtered_batches = [
+                b for b in self.available_batches
+                if query in (b.get("medicine_name") or "").lower()
+                or query in (b.get("generic_name") or "").lower()
+                or query in (b.get("batch_number") or "").lower()
+                or query in (b.get("medicine_code") or "").lower()
+            ]
+            self.lbl_search_match.configure(text=f"{len(self.filtered_batches)} of {len(self.available_batches)} lots match")
+
+        self._update_picker_options()
+
+    def _on_search_enter(self, event=None):
+        if self.filtered_batches:
+            self.entry_qty.focus_set()
+            try:
+                self.entry_qty.select_range(0, "end")
+            except Exception:
+                pass
+
+    def _clear_med_search(self):
+        self.entry_med_search.delete(0, "end")
+        self._on_search_key_release()
+        self.entry_med_search.focus_set()
+
     def _on_batch_selected(self, choice: str):
-        idx = self.batch_opt.cget("values").index(choice) if choice in self.batch_opt.cget("values") else -1
-        if idx >= 0 and idx < len(self.available_batches):
-            b = self.available_batches[idx]
+        if not choice or choice.startswith("..."):
+            return
+        values = self.batch_opt.cget("values")
+        idx = values.index(choice) if choice in values else -1
+        if idx >= 0 and idx < len(self.filtered_batches):
+            b = self.filtered_batches[idx]
             self.entry_price.delete(0, "end")
-            self.entry_price.insert(0, f"{b['selling_price']:.2f}")
+            self.entry_price.insert(0, f"{float(b.get('selling_price', 0)):.2f}")
 
     def _add_item_to_cart(self):
         self.lbl_error.configure(text="")
         choice = self.batch_var.get()
         values = self.batch_opt.cget("values")
-        if choice not in values or not self.available_batches:
+        if choice not in values or not self.filtered_batches or choice.startswith("..."):
             self._show_error("Please select a valid pharmaceutical batch.")
             return
 
         idx = values.index(choice)
-        batch = self.available_batches[idx]
+        if idx < 0 or idx >= len(self.filtered_batches):
+            self._show_error("Selected batch is not valid.")
+            return
+
+        batch = self.filtered_batches[idx]
 
         try:
             qty = int(self.entry_qty.get().strip())
@@ -553,11 +671,14 @@ class NewBillModal(ctk.CTkToplevel):
             self._show_error("Dispensing quantity must be a positive whole number.")
             return
 
+        batch_id = batch.get("batch_id") or batch.get("id")
+        avail_qty = batch.get("available_quantity", batch.get("quantity", 0))
+
         # Check existing cart quantity + new quantity <= available stock
-        existing_in_cart = sum(it["quantity"] for it in self.cart_items if it["batch_id"] == batch["batch_id"])
-        if existing_in_cart + qty > batch["available_quantity"]:
+        existing_in_cart = sum(it["quantity"] for it in self.cart_items if it["batch_id"] == batch_id)
+        if existing_in_cart + qty > avail_qty:
             self._show_error(
-                f"Insufficient stock: Lot '{batch['batch_number']}' has only {batch['available_quantity']} units. "
+                f"Insufficient stock: Lot '{batch.get('batch_number')}' has only {avail_qty} units. "
                 f"You already have {existing_in_cart} in bill."
             )
             return
@@ -573,11 +694,11 @@ class NewBillModal(ctk.CTkToplevel):
         subtotal = round(qty * unit_price, 2)
 
         self.cart_items.append({
-            "batch_id": batch["batch_id"],
-            "medicine_id": batch["medicine_id"],
-            "medicine_name": batch["medicine_name"],
-            "batch_number": batch["batch_number"],
-            "expiry_date": batch["expiry_date"],
+            "batch_id": batch_id,
+            "medicine_id": batch.get("medicine_id", ""),
+            "medicine_name": batch.get("medicine_name", "Medicine"),
+            "batch_number": batch.get("batch_number", "N/A"),
+            "expiry_date": batch.get("expiry_date", ""),
             "quantity": qty,
             "unit_price": unit_price,
             "subtotal": subtotal,
@@ -585,6 +706,9 @@ class NewBillModal(ctk.CTkToplevel):
 
         self._render_cart()
         self._recalc_totals()
+        self.entry_qty.delete(0, "end")
+        self.entry_qty.insert(0, "1")
+        self.entry_med_search.focus_set()
 
     def _render_cart(self):
         # Clear previous rows
@@ -610,8 +734,8 @@ class NewBillModal(ctk.CTkToplevel):
             ctk.CTkLabel(row, text=item["batch_number"], width=110, anchor="w", font=accessibility_manager.get_font(10), text_color=Theme.TEXT_MUTED).pack(side="left")
             ctk.CTkLabel(row, text=str(item["expiry_date"]), width=90, anchor="center", font=accessibility_manager.get_font(10), text_color=Theme.TEXT_MUTED).pack(side="left")
             ctk.CTkLabel(row, text=str(item["quantity"]), width=55, anchor="center", font=accessibility_manager.get_font(11), text_color=Theme.TEXT_MAIN).pack(side="left")
-            ctk.CTkLabel(row, text=f"${item['unit_price']:.2f}", width=75, anchor="e", font=accessibility_manager.get_font(11), text_color=Theme.TEXT_MAIN).pack(side="left")
-            ctk.CTkLabel(row, text=f"${item['subtotal']:.2f}", width=85, anchor="e", font=accessibility_manager.get_font(11, weight="bold"), text_color=Theme.PRIMARY).pack(side="left")
+            ctk.CTkLabel(row, text=f"₹{item['unit_price']:.2f}", width=75, anchor="e", font=accessibility_manager.get_font(11), text_color=Theme.TEXT_MAIN).pack(side="left")
+            ctk.CTkLabel(row, text=f"₹{item['subtotal']:.2f}", width=85, anchor="e", font=accessibility_manager.get_font(11, weight="bold"), text_color=Theme.PRIMARY).pack(side="left")
 
             ctk.CTkButton(
                 row,
@@ -651,9 +775,9 @@ class NewBillModal(ctk.CTkToplevel):
         net_total = round(taxable + tax_amt, 2)
 
         self.lbl_subtotal_display.configure(
-            text=f"Subtotal: ${subtotal:.2f}  |  Disc: -${disc_amt:.2f}  |  Tax: +${tax_amt:.2f}"
+            text=f"Subtotal: ₹{subtotal:.2f}  |  Disc: -₹{disc_amt:.2f}  |  Tax: +₹{tax_amt:.2f}"
         )
-        self.lbl_net_total.configure(text=f"Payable: ${net_total:.2f}")
+        self.lbl_net_total.configure(text=f"Payable: ₹{net_total:.2f}")
 
     def _complete_sale(self):
         self.lbl_error.configure(text="")
@@ -783,7 +907,7 @@ class BillingView(ctk.CTkFrame):
         self.card_revenue = StatCard(
             cards_row,
             title="Today's Revenue",
-            value="—",
+            value="₹0.00",
             subtitle="Gross clinical receipts",
             icon="💵",
             accent_color=Theme.PRIMARY
@@ -810,27 +934,58 @@ class BillingView(ctk.CTkFrame):
         )
         self.card_units.grid(row=0, column=2, sticky="nsew", padx=(8, 0))
 
-        # 3. Filter Bar
+        # 3. Responsive Filter Bar
         filter_bar = ctk.CTkFrame(self, fg_color="transparent")
         filter_bar.pack(fill="x", padx=20, pady=(0, 12))
 
+        search_box = ctk.CTkFrame(filter_bar, fg_color="transparent")
+        search_box.pack(side="left", fill="x", expand=True, padx=(0, 10))
+
         self.search_entry = ctk.CTkEntry(
-            filter_bar,
-            placeholder_text="🔍 Search bills by invoice number, patient name, or phone...",
+            search_box,
+            placeholder_text="🔍 Search bills by invoice number, patient name, contact phone, or cashier...",
             height=36,
             corner_radius=Theme.RADIUS_INPUT,
             border_color=Theme.BORDER,
             font=accessibility_manager.get_font(12)
         )
-        self.search_entry.pack(side="left", fill="x", expand=True, padx=(0, 10))
+        self.search_entry.pack(side="left", fill="x", expand=True, padx=(0, 6))
         self.search_entry.bind("<KeyRelease>", self._apply_filters)
+
+        self.btn_clear_bills_search = ctk.CTkButton(
+            search_box,
+            text="✕ Clear",
+            width=68,
+            height=36,
+            corner_radius=Theme.RADIUS_BUTTON,
+            fg_color=Theme.SECONDARY,
+            hover_color=Theme.SECONDARY_HOVER,
+            text_color=Theme.TEXT_MUTED,
+            font=accessibility_manager.get_font(11),
+            command=self._clear_search
+        )
+        self.btn_clear_bills_search.pack(side="right")
+
+        # Payment Tender Filter Menu
+        self.tender_filter_var = ctk.StringVar(value="All Payment Methods")
+        self.tender_filter_opt = ctk.CTkOptionMenu(
+            filter_bar,
+            variable=self.tender_filter_var,
+            values=["All Payment Methods", "Cash", "Credit Card", "Debit Card", "UPI / Digital", "Insurance"],
+            height=36,
+            width=175,
+            corner_radius=Theme.RADIUS_PILL,
+            font=accessibility_manager.get_font(12),
+            command=lambda v: self._apply_filters()
+        )
+        self.tender_filter_opt.pack(side="right")
 
         # 4. DataTable
         columns = [
             {"key": "invoice_number", "title": "Invoice #", "weight": 2, "sortable": True, "formatter": self._format_inv},
             {"key": "customer_name", "title": "Patient / Customer", "weight": 3, "sortable": True},
-            {"key": "customer_phone", "title": "Contact", "weight": 2, "sortable": True, "formatter": lambda v: v or "—"},
-            {"key": "items_count", "title": "Items", "weight": 1, "sortable": True, "formatter": lambda v: f"{v} lines"},
+            {"key": "customer_phone", "title": "Contact", "weight": 2, "sortable": True},
+            {"key": "items_count", "title": "Items", "weight": 1, "sortable": True, "formatter": lambda p, v, r: ctk.CTkLabel(p, text=f"{v} lines", font=accessibility_manager.get_font(12), anchor="w")},
             {"key": "total_amount", "title": "Grand Total", "weight": 2, "sortable": True, "formatter": self._format_amount},
             {"key": "payment_method", "title": "Tender", "weight": 2, "sortable": True},
             {"key": "payment_status", "title": "Status", "weight": 1, "sortable": True, "formatter": self._format_status},
@@ -838,7 +993,8 @@ class BillingView(ctk.CTkFrame):
         ]
 
         actions = [
-            {"icon": "👁 Show Bill", "width": 80, "command": self._show_receipt_dialog},
+            {"icon": "👁 Bill", "width": 60, "command": self._show_receipt_dialog},
+            {"icon": "↩ Return", "width": 68, "command": self._prompt_return},
         ]
 
         self.table = DataTable(
@@ -850,15 +1006,27 @@ class BillingView(ctk.CTkFrame):
         )
         self.table.pack(fill="both", expand=True, padx=20, pady=(0, 16))
 
-    def _format_inv(self, val):
-        return f"📄 {val}"
+    def _format_inv(self, parent, val, row):
+        return ctk.CTkLabel(
+            parent,
+            text=f"📄 {val}",
+            font=accessibility_manager.get_font(12, weight="bold", family="Consolas"),
+            text_color=Theme.PRIMARY,
+            anchor="w"
+        )
 
-    def _format_amount(self, val):
-        return f"${float(val):.2f}"
+    def _format_amount(self, parent, val, row):
+        return ctk.CTkLabel(
+            parent,
+            text=f"₹{float(val or 0):.2f}",
+            font=accessibility_manager.get_font(12, weight="bold"),
+            text_color=Theme.TEXT_MAIN,
+            anchor="w"
+        )
 
-    def _format_status(self, val):
+    def _format_status(self, parent, val, row):
         badge_variant = "success" if str(val).lower() == "paid" else "warning"
-        return {"badge": str(val).upper(), "variant": badge_variant}
+        return StatusBadge(parent, text=str(val or "PAID").upper(), variant=badge_variant)
 
     def _load_data(self):
         self.lbl_count.configure(text="Refreshing transactions from PostgreSQL...")
@@ -876,11 +1044,11 @@ class BillingView(ctk.CTkFrame):
         self.raw_sales = sales_list
 
         # Update KPI Cards
-        rev = summary.get("today_revenue", 0.0)
-        bills = summary.get("today_bills_count", 0)
-        units = summary.get("today_units_dispensed", 0)
+        rev = summary.get("today_revenue") if summary.get("today_revenue") is not None else summary.get("gross_revenue", 0.0)
+        bills = summary.get("today_bills_count") if summary.get("today_bills_count") is not None else summary.get("total_sales_count", 0)
+        units = summary.get("today_units_dispensed") if summary.get("today_units_dispensed") is not None else summary.get("total_units_sold", 0)
 
-        self.card_revenue.set_value(f"${rev:.2f}")
+        self.card_revenue.set_value(f"₹{float(rev):.2f}")
         self.card_bills.set_value(f"{bills}")
         self.card_units.set_value(f"{units}")
 
@@ -891,14 +1059,20 @@ class BillingView(ctk.CTkFrame):
 
     def _apply_filters(self, event=None):
         query = self.search_entry.get().strip().lower()
+        tender_filter = self.tender_filter_var.get()
 
         filtered = []
         for s in self.raw_sales:
             inv = (s.get("invoice_number") or "").lower()
             name = (s.get("customer_name") or "").lower()
             phone = (s.get("customer_phone") or "").lower()
+            cashier = (s.get("cashier_name") or "").lower()
+            payment = (s.get("payment_method") or "")
 
-            if query and (query not in inv and query not in name and query not in phone):
+            if query and (query not in inv and query not in name and query not in phone and query not in cashier):
+                continue
+
+            if tender_filter != "All Payment Methods" and payment.lower() != tender_filter.lower():
                 continue
 
             dt_raw = s.get("created_at", "")
@@ -916,11 +1090,41 @@ class BillingView(ctk.CTkFrame):
             row["created_at_fmt"] = dt_fmt
             filtered.append(row)
 
-        self.lbl_count.configure(text=f"Showing {len(filtered)} sales records in PostgreSQL")
+        total_count = len(self.raw_sales)
+        self.lbl_count.configure(text=f"Showing {len(filtered)} of {total_count} transactions in PostgreSQL")
         self.table.set_data(filtered)
+
+    def _clear_search(self):
+        self.search_entry.delete(0, "end")
+        self.tender_filter_var.set("All Payment Methods")
+        self._apply_filters()
+        self.search_entry.focus_set()
 
     def _show_receipt_dialog(self, sale_dict: Dict[str, Any]):
         CustomerReceiptModal(self.winfo_toplevel(), sale_dict)
+
+    def _prompt_return(self, sale_dict: Dict[str, Any]):
+        from app.ui.components.dialogs import ConfirmDialog
+        inv = sale_dict.get("invoice_number", "")
+        stat = sale_dict.get("payment_status", "Paid")
+        if stat.lower() == "refunded":
+            import tkinter.messagebox as msg
+            msg.showwarning("Already Refunded", f"Invoice {inv} has already been refunded.")
+            return
+
+        def _do_return():
+            def _api():
+                return self.api_client.return_sale(sale_dict["id"], reason="Customer Clinical Return")
+            run_in_background(_api, on_success=lambda _: self._load_data())
+
+        ConfirmDialog(
+            self.winfo_toplevel(),
+            title="Authorize Sale Return",
+            message=f"Authorize return and stock restoration for invoice {inv}?\nAmount to refund: ₹{float(sale_dict.get('total_amount', 0)):.2f}",
+            confirm_label="Refund & Restore Stock",
+            danger=True,
+            on_confirm=_do_return
+        )
 
     def _open_new_bill_modal(self):
         def _on_success(created_sale):

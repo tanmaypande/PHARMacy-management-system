@@ -340,3 +340,51 @@ class BillingService:
                 "available_quantity": batch.quantity,
             })
         return result
+
+    @classmethod
+    def process_return(
+        cls,
+        db: Session,
+        sale_id: uuid.UUID,
+        reason: str = "Customer Return",
+        actor: str = "Pharmacist"
+    ) -> Dict[str, Any]:
+        """
+        Processes an authorized sale return / cancellation.
+        TQM Safeguards:
+        - Atomic stock replenishment to original batch inventory.
+        - Idempotent: cannot return an already refunded or cancelled sale.
+        - Full audit trail recorded.
+        """
+        sale = cls.get_sale_by_id(db, sale_id)
+        if not sale:
+            raise ValueError("Sale transaction not found.")
+
+        if sale.payment_status in ("Refunded", "Cancelled"):
+            raise ValueError(f"Sale {sale.invoice_number} is already {sale.payment_status}.")
+
+        # Replenish stock for all line items
+        for item in sale.items:
+            batch = db.execute(
+                select(MedicineBatch)
+                .where(MedicineBatch.id == item.batch_id)
+                .with_for_update()
+            ).scalar_one_or_none()
+
+            if batch:
+                batch.quantity += item.quantity
+                db.add(batch)
+
+        sale.payment_status = "Refunded"
+        sale.notes = f"{sale.notes or ''} [RETURNED by {actor}: {reason}]".strip()
+        db.add(sale)
+        db.commit()
+
+        return {
+            "sale_id": str(sale.id),
+            "invoice_number": sale.invoice_number,
+            "status": sale.payment_status,
+            "refund_amount": float(sale.total_amount),
+            "message": f"Successfully refunded ₹{float(sale.total_amount):.2f} and restored stock."
+        }
+

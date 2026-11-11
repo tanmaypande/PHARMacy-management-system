@@ -22,8 +22,13 @@ from app.ui.categories.category_view import CategoryView
 from app.ui.medicines.medicine_view import MedicineView
 from app.ui.inventory.inventory_view import InventoryView
 from app.ui.billing.billing_view import BillingView
+from app.ui.purchases.purchase_view import PurchaseView
+from app.ui.suppliers.supplier_view import SupplierView
+from app.ui.customers.customer_view import CustomerView
+from app.ui.prescriptions.prescription_view import PrescriptionView
+from app.ui.reports.reports_view import ReportsView
+from app.ui.users.users_view import UsersView
 from app.ui.settings.settings_view import SettingsView
-from app.ui.common.roadmap_view import RoadmapView
 
 
 class MainWindow(ctk.CTk):
@@ -52,6 +57,7 @@ class MainWindow(ctk.CTk):
             ("purchases", "🛒", "Purchases", "Inbound Purchases", "Wholesale purchase orders and receiving"),
             ("suppliers", "🏢", "Suppliers", "Wholesale Suppliers", "Pharmaceutical distributor registry"),
             ("customers", "👥", "Customers", "Patient Records", "Patient directory and medication profiles"),
+            ("prescriptions", "📋", "Prescriptions", "Clinical Prescriptions", "Prescriber registry and Rx profile links"),
             ("reports", "📈", "Reports & TQM", "TQM Quality Reports", "Quality Pareto metrics and expiration logs"),
             ("users", "👤", "Users & Roles", "Users & Permissions", "Role-Based Access Control (RBAC) & Audit Log"),
             ("settings", "⚙", "Settings", "System Settings", "TQM Q12 Accessibility and interface preferences"),
@@ -189,11 +195,11 @@ class MainWindow(ctk.CTk):
             _create_nav_button(key, icon, label)
 
         _add_section("TRANSACTIONS & DIRECTORY")
-        for key, icon, label, _, _ in self.nav_items[4:8]:
+        for key, icon, label, _, _ in self.nav_items[4:9]:
             _create_nav_button(key, icon, label)
 
         _add_section("QUALITY & SYSTEM")
-        for key, icon, label, _, _ in self.nav_items[8:]:
+        for key, icon, label, _, _ in self.nav_items[9:]:
             _create_nav_button(key, icon, label)
 
         # ================= 2. Main Right Container =================
@@ -464,13 +470,24 @@ class MainWindow(ctk.CTk):
         self.navigate(keys[new_idx])
 
     def _handle_global_search(self, query: str):
-        self.navigate("medicines")
         if hasattr(self.current_view_widget, "search_entry"):
             self.current_view_widget.search_entry.delete(0, "end")
             self.current_view_widget.search_entry.insert(0, query)
-            self.current_view_widget._apply_filters()
+            if hasattr(self.current_view_widget, "_apply_filters"):
+                self.current_view_widget._apply_filters()
+            elif hasattr(self.current_view_widget, "_on_search"):
+                self.current_view_widget._on_search()
+        else:
+            self.navigate("medicines")
+            if hasattr(self.current_view_widget, "search_entry"):
+                self.current_view_widget.search_entry.delete(0, "end")
+                self.current_view_widget.search_entry.insert(0, query)
+                if hasattr(self.current_view_widget, "_apply_filters"):
+                    self.current_view_widget._apply_filters()
+                elif hasattr(self.current_view_widget, "_on_search"):
+                    self.current_view_widget._on_search()
 
-    def navigate(self, key: str):
+    def navigate(self, key: str, open_add: bool = False):
         self.current_view_key = key
 
         # Update TopHeader Title and Subtitle
@@ -522,6 +539,7 @@ class MainWindow(ctk.CTk):
         elif key == "settings":
             self.current_view_widget = SettingsView(
                 self.view_container,
+                api_client=self.api_client,
                 on_theme_change=self._on_accessibility_change
             )
         elif key == "sales":
@@ -530,121 +548,54 @@ class MainWindow(ctk.CTk):
                 self.api_client
             )
         elif key == "purchases":
-            self.current_view_widget = RoadmapView(
+            self.current_view_widget = PurchaseView(
                 self.view_container,
-                module_name="Purchases & Inbound Invoices",
-                icon="🛒",
-                milestone="Phase 2 Sprint — Procurement Pipeline",
-                overview="Manages procurement purchase orders (POs), vendor invoice reconciliations, and receiving dock audits.",
-                schema_info=[
-                    {"table": "purchase_orders", "desc": "Order number, supplier ID, expected date, status, total cost"},
-                    {"table": "po_items", "desc": "Ordered medicine ID, quantity requested, contracted unit cost"}
-                ],
-                planned_endpoints=[
-                    "POST /api/v1/purchases/orders (Create PO)",
-                    "PUT /api/v1/purchases/receive (Receive & create batch lots)",
-                    "GET /api/v1/purchases/pending (Pending deliveries)"
-                ],
-                tqm_safeguards=[
-                    "Receiving dock inspection: Expiry date validation before lot creation",
-                    "Non-negative quantity check constraints enforced on line items",
-                    "Vendor fulfillment lead-time audit logging"
-                ]
+                self.api_client
             )
         elif key == "suppliers":
-            self.current_view_widget = RoadmapView(
+            self.current_view_widget = SupplierView(
                 self.view_container,
-                module_name="Wholesale Pharmaceutical Suppliers",
-                icon="🏢",
-                milestone="Database Table Ready — Service Integration Pending",
-                overview="Maintains licensed pharmaceutical distributors, contact persons, tax IDs, and delivery SLAs.",
-                schema_info=[
-                    {"table": "suppliers", "desc": "ID, name, contact person, phone, email, address, is_active (Table exists in PostgreSQL 18)"}
-                ],
-                planned_endpoints=[
-                    "GET /api/v1/suppliers (List active vendors)",
-                    "POST /api/v1/suppliers (Register new distributor)",
-                    "PUT /api/v1/suppliers/{id} (Update vendor profile)"
-                ],
-                tqm_safeguards=[
-                    "Unique name constraint on supplier table",
-                    "Foreign key cascade restrictions preserve purchase order history",
-                    "Supplier performance rating tracking"
-                ]
+                self.api_client
             )
         elif key == "customers":
-            self.current_view_widget = RoadmapView(
+            self.current_view_widget = CustomerView(
                 self.view_container,
-                module_name="Patient & Customer Directory",
-                icon="👥",
-                milestone="Phase 2 Sprint — Patient Registry",
-                overview="Stores patient demographics, prescription histories, medication allergy alerts, and account balances.",
-                schema_info=[
-                    {"table": "customers", "desc": "Patient name, phone, email, chronic conditions, loyalty credits"},
-                    {"table": "prescriptions", "desc": "Doctor name, clinic license, diagnosis, validity date"}
-                ],
-                planned_endpoints=[
-                    "GET /api/v1/customers/search?phone=... (Rapid lookup)",
-                    "POST /api/v1/customers (Enroll patient)",
-                    "GET /api/v1/customers/{id}/history (Medication profile)"
-                ],
-                tqm_safeguards=[
-                    "Drug allergy contraindication popups during checkout",
-                    "Prescription expiry validation before dispensing controlled drugs",
-                    "HIPAA-compliant personal health information audit logs"
-                ]
+                self.api_client
+            )
+        elif key == "prescriptions":
+            self.current_view_widget = PrescriptionView(
+                self.view_container,
+                self.api_client
             )
         elif key == "reports":
-            self.current_view_widget = RoadmapView(
+            self.current_view_widget = ReportsView(
                 self.view_container,
-                module_name="TQM Quality & Audit Reports",
-                icon="📈",
-                milestone="Phase 2 Sprint — Quality Analytics",
-                overview="Generates Pareto 80/20 analysis charts, expiration hazard curves, and stock turnover metrics.",
-                schema_info=[
-                    {"table": "audit_logs", "desc": "User ID, action type, table affected, before/after delta snapshot"}
-                ],
-                planned_endpoints=[
-                    "GET /api/v1/reports/pareto (Fast vs slow moving stock)",
-                    "GET /api/v1/reports/expiry-hazard (Hazard rate analysis)",
-                    "GET /api/v1/reports/compliance-audit (Exportable regulatory PDF)"
-                ],
-                tqm_safeguards=[
-                    "Pareto 80/20 inventory classification to eliminate stockouts",
-                    "Defect tracking: Quarantine logs for damaged or expired shipments",
-                    "Zero manual tampering: Reports generated directly from immutable DB rows"
-                ]
+                self.api_client
             )
         elif key == "users":
-            self.current_view_widget = RoadmapView(
+            self.current_view_widget = UsersView(
                 self.view_container,
-                module_name="User Accounts & Role-Based Permissions (RBAC)",
-                icon="👤",
-                milestone="Phase 2 Sprint — Authentication Service",
-                overview="Governs system access across Admin, Pharmacist, and Cashier roles with bcrypt password hashing and JWT sessions.",
-                schema_info=[
-                    {"table": "users", "desc": "Username, hashed_password, role, is_active, last_login"},
-                    {"table": "roles_permissions", "desc": "Role definitions and granular capability matrix"}
-                ],
-                planned_endpoints=[
-                    "POST /api/v1/auth/login (JWT token issuance)",
-                    "POST /api/v1/users (Admin user creation)",
-                    "GET /api/v1/auth/me (Active session permissions)"
-                ],
-                tqm_safeguards=[
-                    "Bcrypt password hashing with salt (passlib/bcrypt installed)",
-                    "Least-privilege principle: Cashiers blocked from modifying formulary",
-                    "Failed login lockout to prevent brute-force attacks"
-                ]
+                self.api_client
             )
 
         self.current_view_widget.grid(row=0, column=0, sticky="nsew")
+        if open_add:
+            self.after(120, self.trigger_new_record)
 
     def _start_connection_monitor(self):
         def _loop():
+            consecutive_offline = 0
             while self._monitor_running:
                 try:
                     health = self.api_client.get_health()
+                    is_api_up = health.get("api_service") == "running"
+                    if not is_api_up:
+                        consecutive_offline += 1
+                        if consecutive_offline >= 2:
+                            self._ensure_backend_process()
+                    else:
+                        consecutive_offline = 0
+
                     try:
                         metrics = self.api_client.get_dashboard_metrics()
                         low_stock = metrics.get("low_stock_medicines", 0)
@@ -671,12 +622,44 @@ class MainWindow(ctk.CTk):
                         break
                     _gui_queue.put((self._render_health, (health, alerts_list), {}))
                 except Exception:
+                    consecutive_offline += 1
+                    if consecutive_offline >= 2:
+                        self._ensure_backend_process()
                     if not self._monitor_running:
                         break
                     _gui_queue.put((self._render_health, ({}, []), {}))
                 time.sleep(10)
 
         threading.Thread(target=_loop, daemon=True).start()
+
+    def _ensure_backend_process(self):
+        """Self-healing watchdog: auto-spawns uvicorn if backend stops unexpectedly."""
+        try:
+            import subprocess
+            import sys
+            from pathlib import Path
+            from app.core.config import settings
+
+            if not hasattr(self, "_spawned_backend") or self._spawned_backend is None or self._spawned_backend.poll() is not None:
+                project_root = Path(__file__).resolve().parent.parent.parent
+                cmd = [
+                    sys.executable,
+                    "-m",
+                    "uvicorn",
+                    "app.main_api:app",
+                    "--host",
+                    str(settings.API_HOST),
+                    "--port",
+                    str(settings.API_PORT),
+                ]
+                self._spawned_backend = subprocess.Popen(
+                    cmd,
+                    cwd=str(project_root),
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL
+                )
+        except Exception:
+            pass
 
     def _render_health(self, health: dict, alerts: list):
         self._last_api_ok = health.get("api_service") == "running"
@@ -712,6 +695,11 @@ class MainWindow(ctk.CTk):
 
     def destroy(self):
         self._monitor_running = False
+        if hasattr(self, "_spawned_backend") and self._spawned_backend:
+            try:
+                self._spawned_backend.terminate()
+            except Exception:
+                pass
         super().destroy()
 
 

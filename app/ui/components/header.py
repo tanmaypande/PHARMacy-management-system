@@ -89,9 +89,12 @@ class TopHeader(ctk.CTkFrame):
         right_box = ctk.CTkFrame(self, fg_color="transparent")
         right_box.pack(side="right", padx=16, pady=12)
 
-        # 2. Search Field
+        # 2. Search Field Box with Clear Button
+        search_box = ctk.CTkFrame(right_box, fg_color="transparent")
+        search_box.pack(side="left", padx=(0, 10))
+
         self.search_entry = ctk.CTkEntry(
-            right_box,
+            search_box,
             placeholder_text="🔍 Search (Ctrl+F)...",
             width=210,
             height=34,
@@ -99,8 +102,23 @@ class TopHeader(ctk.CTkFrame):
             border_color=Theme.BORDER,
             font=accessibility_manager.get_font(12)
         )
-        self.search_entry.pack(side="left", padx=(0, 10))
+        self.search_entry.pack(side="left", padx=(0, 4))
         self.search_entry.bind("<Return>", self._handle_search)
+        self.search_entry.bind("<KeyRelease>", self._handle_search)
+
+        self.btn_clear_search = ctk.CTkButton(
+            search_box,
+            text="✕",
+            width=28,
+            height=34,
+            corner_radius=8,
+            fg_color=Theme.SECONDARY,
+            hover_color=Theme.SECONDARY_HOVER,
+            text_color=Theme.TEXT_MUTED,
+            font=accessibility_manager.get_font(11, weight="bold"),
+            command=self._clear_search
+        )
+        self.btn_clear_search.pack(side="right")
 
         # 3. Notification Bell with Badge
         self.btn_bell = ctk.CTkButton(
@@ -237,8 +255,14 @@ class TopHeader(ctk.CTkFrame):
 
     def _handle_search(self, event=None):
         query = self.search_entry.get().strip()
-        if self.on_search and query:
+        if self.on_search:
             self.on_search(query)
+
+    def _clear_search(self):
+        self.search_entry.delete(0, "end")
+        if self.on_search:
+            self.on_search("")
+        self.search_entry.focus_set()
 
     def _handle_theme_toggle(self):
         accessibility_manager.toggle_mode()

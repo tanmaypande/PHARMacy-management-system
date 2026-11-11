@@ -3,7 +3,7 @@ Therapeutic Drug Categories Management View.
 Integrated with responsive DataTable, live search, sorting, pagination, and accessible modals.
 """
 import threading
-from typing import Optional
+from typing import Optional, Any
 import customtkinter as ctk
 from app.client.api_client import APIClient
 from app.ui.theme import Theme
@@ -128,9 +128,9 @@ class CategoryModal(ctk.CTkToplevel):
             self.on_success()
         self.destroy()
 
-    def _on_err(self, msg: str):
+    def _on_err(self, msg: Any):
         self.btn_save.configure(state="normal", text="Save Category")
-        clean_msg = msg.replace("RuntimeError: ", "")
+        clean_msg = str(msg).replace("RuntimeError: ", "")
         self.lbl_error.configure(text=clean_msg)
 
 
@@ -207,8 +207,22 @@ class CategoryView(ctk.CTkFrame):
             border_color=Theme.BORDER,
             font=accessibility_manager.get_font(12)
         )
-        self.search_entry.pack(side="left", fill="x", expand=True, padx=(0, 10))
+        self.search_entry.pack(side="left", fill="x", expand=True, padx=(0, 6))
         self.search_entry.bind("<KeyRelease>", self._on_search)
+
+        self.btn_clear_search = ctk.CTkButton(
+            filter_bar,
+            text="✕",
+            width=36,
+            height=36,
+            corner_radius=Theme.RADIUS_INPUT,
+            fg_color=Theme.BG_MUTED,
+            hover_color=Theme.BORDER,
+            text_color=Theme.TEXT_MUTED,
+            font=accessibility_manager.get_font(12, weight="bold"),
+            command=self._clear_search
+        )
+        self.btn_clear_search.pack(side="left", padx=(0, 10))
 
         # DataTable
         columns = [
@@ -277,6 +291,11 @@ class CategoryView(ctk.CTkFrame):
             self.table.set_data(self.categories_list)
         else:
             self.table.filter(lambda c: q in c["name"].lower() or (c.get("description") and q in c["description"].lower()))
+
+    def _clear_search(self):
+        self.search_entry.delete(0, "end")
+        self._on_search()
+        self.search_entry.focus()
 
     def load_categories(self):
         self.lbl_count.configure(text="⏳ Querying database via FastAPI...", text_color=Theme.TEXT_MUTED)

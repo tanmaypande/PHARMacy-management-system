@@ -79,3 +79,6 @@ class StatCard(ctk.CTkFrame):
         self.val_label.configure(text=str(value))
         if subtitle:
             self.sub_label.configure(text=subtitle)
+
+    def set_value(self, value: str, subtitle: str = None):
+        self.update_value(value, subtitle)

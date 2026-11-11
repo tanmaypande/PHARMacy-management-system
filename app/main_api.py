@@ -7,6 +7,12 @@ from app.api.routes.medicines import router as medicines_router
 from app.api.routes.batches import router as batches_router
 from app.api.routes.dashboard import router as dashboard_router
 from app.api.routes.sales import router as sales_router
+from app.api.routes.auth import router as auth_router
+from app.api.routes.suppliers import router as suppliers_router
+from app.api.routes.customers import router as customers_router
+from app.api.routes.purchases import router as purchases_router
+from app.api.routes.prescriptions import router as prescriptions_router
+from app.api.routes.reports import router as reports_router
 
 app = FastAPI(
     title="Pharmacy Management System API",
@@ -20,6 +26,12 @@ app.include_router(categories_router)
 app.include_router(medicines_router)
 app.include_router(batches_router)
 app.include_router(sales_router)
+app.include_router(auth_router)
+app.include_router(suppliers_router)
+app.include_router(customers_router)
+app.include_router(purchases_router)
+app.include_router(prescriptions_router)
+app.include_router(reports_router)
 
 
 @app.get("/health", tags=["Health & Monitoring"])

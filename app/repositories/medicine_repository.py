@@ -68,8 +68,8 @@ class MedicineRepository:
 
         total = self.db.execute(count_stmt).scalar() or 0
 
-        # Pagination & Ordering
-        stmt = stmt.order_by(Medicine.name.asc()).offset(skip).limit(limit)
+        # Pagination & Ordering (latest created items first so newly added products immediately show on page 1)
+        stmt = stmt.order_by(Medicine.created_at.desc(), Medicine.name.asc()).offset(skip).limit(limit)
         results = list(self.db.execute(stmt).unique().scalars().all())
         return results, total
 

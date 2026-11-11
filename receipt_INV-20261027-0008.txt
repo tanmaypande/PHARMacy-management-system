@@ -1,0 +1,25 @@
+==============================================
+         MEDICARE PHARMACY & CLINIC          
+     Licensed Pharmaceutical Dispensary      
+         Tel: +1 (555) 019-2834              
+==============================================
+ Invoice No : INV-20261027-0008
+ Date/Time  : 27 Oct 2026, 09:23 AM
+ Cashier    : Pharmacist
+ Patient    : TANMAY
+ Contact    : 9027420929
+----------------------------------------------
+Item / Lot                Qty   Price    Total
+----------------------------------------------
+Vitamin C 500mg Chewab      7    5.00    35.00
+  Lot: BATCH-001 (Exp: 2027-04-18)
+----------------------------------------------
+Subtotal:                      $        35.00
+==============================================
+GRAND TOTAL:                 $          35.00
+Payment Tendered:                        Cash
+==============================================
+        THANK YOU FOR TRUSTING MEDICARE       
+   Please keep this receipt for prescription  
+              records & refills               
+==============================================

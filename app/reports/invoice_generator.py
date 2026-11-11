@@ -63,20 +63,20 @@ class InvoiceGenerator:
 
         lines.extend([
             "-" * 46,
-            f"{'Subtotal:':<30} ${subtotal_val:>13.2f}",
+            f"{'Subtotal:':<30} ₹{subtotal_val:>13.2f}",
         ])
 
         if discount_val > 0:
             pct = sale_dict.get("discount_percent", 0)
-            lines.append(f"{f'Discount ({pct}%):':<30} -${discount_val:>12.2f}")
+            lines.append(f"{f'Discount ({pct}%):':<30} -₹{discount_val:>12.2f}")
 
         if tax_val > 0:
             pct = sale_dict.get("tax_percent", 0)
-            lines.append(f"{f'Tax / GST ({pct}%):':<30} +${tax_val:>12.2f}")
+            lines.append(f"{f'Tax / GST ({pct}%):':<30} +₹{tax_val:>12.2f}")
 
         lines.extend([
             "=" * 46,
-            f"{'GRAND TOTAL:':<28} ${total_val:>15.2f}",
+            f"{'GRAND TOTAL:':<28} ₹{total_val:>15.2f}",
             f"{'Payment Tendered:':<28} {payment_method:>16}",
             "=" * 46,
             "        THANK YOU FOR TRUSTING MEDICARE       ",

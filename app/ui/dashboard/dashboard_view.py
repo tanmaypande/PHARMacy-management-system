@@ -106,7 +106,7 @@ class DashboardView(ctk.CTkFrame):
                 hover_color=Theme.ACCENT_LIME_HOVER,
                 text_color=Theme.ACCENT_LIME_TEXT,
                 font=accessibility_manager.get_font(12, weight="bold"),
-                command=lambda: self.on_navigate("medicines")
+                command=lambda: self.on_navigate("medicines", open_add=True)
             ).pack(side="left")
 
         # Hero Right Side: Pill Watermark
@@ -128,7 +128,7 @@ class DashboardView(ctk.CTkFrame):
         self.card_total_meds = StatCard(cards_grid, "Total Medicines", "...", "Active Master Formulary", "💊")
         self.card_total_meds.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
 
-        self.card_today_sales = StatCard(cards_grid, "Today's Sales", "$0.00", "POS Phase 2 Sprint", "🧾")
+        self.card_today_sales = StatCard(cards_grid, "Today's Sales", "₹0.00", "POS Phase 2 Sprint", "🧾")
         self.card_today_sales.grid(row=0, column=1, padx=5, pady=5, sticky="nsew")
 
         self.card_low_stock = StatCard(cards_grid, "Low-Stock Items", "...", "Under Reorder Level", "⚠️")
@@ -300,9 +300,9 @@ class DashboardView(ctk.CTkFrame):
         if sales_summary:
             today_rev = sales_summary.get("today_revenue", 0.0)
             today_bills = sales_summary.get("today_bills_count", 0)
-            self.card_today_sales.update_value(f"${today_rev:.2f}", f"{today_bills} Transactions Today")
+            self.card_today_sales.update_value(f"₹{today_rev:.2f}", f"{today_bills} Transactions Today")
         else:
-            self.card_today_sales.update_value("$0.00", "0 Transactions Today")
+            self.card_today_sales.update_value("₹0.00", "0 Transactions Today")
 
         low_stock = metrics.get("low_stock_medicines", 0)
         self.card_low_stock.update_value(

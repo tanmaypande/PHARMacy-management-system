@@ -18,7 +18,7 @@ def create_medicine(payload: MedicineCreate, db: Session = Depends(get_db)):
 @router.get("", response_model=List[MedicineResponse])
 def list_medicines(
     skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=500),
+    limit: int = Query(500, ge=1, le=5000),
     search: Optional[str] = Query(None, description="Search by name, code, or generic name"),
     category_id: Optional[uuid.UUID] = Query(None, description="Filter by Category"),
     is_active: Optional[bool] = Query(None, description="Filter by active status"),
@@ -51,3 +51,9 @@ def update_medicine(medicine_id: uuid.UUID, payload: MedicineUpdate, db: Session
 def deactivate_medicine(medicine_id: uuid.UUID, db: Session = Depends(get_db)):
     service = MedicineService(db)
     return service.deactivate_medicine(medicine_id)
+
+
+@router.delete("/{medicine_id}/hard", status_code=status.HTTP_200_OK)
+def hard_delete_medicine(medicine_id: uuid.UUID, db: Session = Depends(get_db)):
+    service = MedicineService(db)
+    return service.delete_medicine(medicine_id)

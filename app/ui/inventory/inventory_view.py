@@ -76,13 +76,13 @@ class BatchModal(ctk.CTkToplevel):
 
         col_cost = ctk.CTkFrame(row, fg_color="transparent")
         col_cost.pack(side="left", expand=True, fill="x", padx=(0, 6))
-        ctk.CTkLabel(col_cost, text="Cost Price ($)", font=accessibility_manager.get_font(13), text_color=Theme.TEXT_MAIN).pack(anchor="w")
+        ctk.CTkLabel(col_cost, text="Cost Price (₹)", font=accessibility_manager.get_font(13), text_color=Theme.TEXT_MAIN).pack(anchor="w")
         self.entry_cost = ctk.CTkEntry(col_cost, placeholder_text="0.00", height=38, border_color=Theme.BORDER, font=accessibility_manager.get_font(13))
         self.entry_cost.pack(fill="x", pady=(2, 0))
 
         col_sell = ctk.CTkFrame(row, fg_color="transparent")
         col_sell.pack(side="right", expand=True, fill="x", padx=(6, 0))
-        ctk.CTkLabel(col_sell, text="Retail Selling Price ($)", font=accessibility_manager.get_font(13), text_color=Theme.TEXT_MAIN).pack(anchor="w")
+        ctk.CTkLabel(col_sell, text="Retail Selling Price (₹)", font=accessibility_manager.get_font(13), text_color=Theme.TEXT_MAIN).pack(anchor="w")
         self.entry_sell = ctk.CTkEntry(col_sell, placeholder_text="0.00", height=38, border_color=Theme.BORDER, font=accessibility_manager.get_font(13))
         self.entry_sell.pack(fill="x", pady=(2, 0))
 
@@ -192,9 +192,9 @@ class BatchModal(ctk.CTkToplevel):
             self.on_success()
         self.destroy()
 
-    def _on_err(self, msg: str):
+    def _on_err(self, msg: Any):
         self.btn_save.configure(state="normal", text="Commit Batch to Stock")
-        clean_msg = msg.replace("RuntimeError: ", "")
+        clean_msg = str(msg).replace("RuntimeError: ", "")
         self.lbl_error.configure(text=clean_msg)
 
 
@@ -271,8 +271,22 @@ class InventoryView(ctk.CTkFrame):
             border_color=Theme.BORDER,
             font=accessibility_manager.get_font(12)
         )
-        self.search_entry.pack(side="left", fill="x", expand=True, padx=(0, 10))
+        self.search_entry.pack(side="left", fill="x", expand=True, padx=(0, 6))
         self.search_entry.bind("<KeyRelease>", self._apply_filters)
+
+        self.btn_clear_search = ctk.CTkButton(
+            filter_bar,
+            text="✕",
+            width=36,
+            height=36,
+            corner_radius=Theme.RADIUS_INPUT,
+            fg_color=Theme.BG_MUTED,
+            hover_color=Theme.BORDER,
+            text_color=Theme.TEXT_MUTED,
+            font=accessibility_manager.get_font(12, weight="bold"),
+            command=self._clear_search
+        )
+        self.btn_clear_search.pack(side="left", padx=(0, 10))
 
         # Segmented Filter Buttons
         self.filter_buttons = {}
@@ -305,8 +319,8 @@ class InventoryView(ctk.CTkFrame):
             {"key": "batch_number", "title": "Batch / Lot #", "weight": 2, "sortable": True, "formatter": self._format_batch_no},
             {"key": "medicine_name", "title": "Target Medicine", "weight": 3, "sortable": True},
             {"key": "quantity", "title": "Units In-Stock", "weight": 1, "align": "center", "sortable": True, "formatter": self._format_units},
-            {"key": "cost_price", "title": "Cost", "weight": 1, "formatter": lambda p, v, r: ctk.CTkLabel(p, text=f"${float(v or 0):.2f}", font=accessibility_manager.get_font(12), text_color=Theme.TEXT_MUTED)},
-            {"key": "selling_price", "title": "Retail", "weight": 1, "formatter": lambda p, v, r: ctk.CTkLabel(p, text=f"${float(v or 0):.2f}", font=accessibility_manager.get_font(12, weight="bold"), text_color=Theme.TEXT_MAIN)},
+            {"key": "cost_price", "title": "Cost", "weight": 1, "formatter": lambda p, v, r: ctk.CTkLabel(p, text=f"₹{float(v or 0):.2f}", font=accessibility_manager.get_font(12), text_color=Theme.TEXT_MUTED)},
+            {"key": "selling_price", "title": "Retail", "weight": 1, "formatter": lambda p, v, r: ctk.CTkLabel(p, text=f"₹{float(v or 0):.2f}", font=accessibility_manager.get_font(12, weight="bold"), text_color=Theme.TEXT_MAIN)},
             {"key": "expiry_date", "title": "Expiry Date", "weight": 2, "sortable": True, "formatter": self._format_expiry_date},
             {"key": "compliance", "title": "TQM Compliance", "weight": 2, "formatter": self._format_compliance}
         ]
@@ -372,8 +386,8 @@ class InventoryView(ctk.CTkFrame):
             "Medicine Name": batch.get("medicine_name") or "Unspecified",
             "Medicine SKU": batch.get("medicine_code") or "—",
             "Physical Quantity": f"{batch.get('quantity', 0)} Units",
-            "Cost Price": f"${float(batch.get('cost_price', 0)):.2f}",
-            "Selling Retail Price": f"${float(batch.get('selling_price', 0)):.2f}",
+            "Cost Price": f"₹{float(batch.get('cost_price', 0)):.2f}",
+            "Selling Retail Price": f"₹{float(batch.get('selling_price', 0)):.2f}",
             "Expiry Date": str(batch.get("expiry_date")),
             "Days Until Expiry": f"{batch.get('days_until_expiry', 0)} Days",
             "TQM Status": "EXPIRED - Quarantined from Sales" if batch.get("is_expired") else "Active & Valid Lot",
@@ -419,6 +433,11 @@ class InventoryView(ctk.CTkFrame):
             return True
 
         self.table.filter(match)
+
+    def _clear_search(self):
+        self.search_entry.delete(0, "end")
+        self._apply_filters()
+        self.search_entry.focus()
 
     def load_batches(self):
         self.lbl_count.configure(text="⏳ Querying database via FastAPI...", text_color=Theme.TEXT_MUTED)

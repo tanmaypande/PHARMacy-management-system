@@ -24,7 +24,7 @@ class MedicineModal(ctk.CTkToplevel):
         self.categories_map = {}
 
         self.title("Edit Medicine" if medicine else "Register New Medicine")
-        self.geometry("540x650")
+        self.geometry("560x700")
         self.resizable(False, False)
         self.grab_set()
 
@@ -72,11 +72,50 @@ class MedicineModal(ctk.CTkToplevel):
         if self.medicine and self.medicine.get("generic_name"):
             self.entry_generic.insert(0, self.medicine.get("generic_name", ""))
 
-        # Category Dropdown
-        ctk.CTkLabel(container, text="Therapeutic Category *", font=accessibility_manager.get_font(13, weight="bold"), text_color=Theme.TEXT_MAIN).pack(anchor="w")
+        # Category Dropdown with Live Search Bar
+        cat_hdr = ctk.CTkFrame(container, fg_color="transparent")
+        cat_hdr.pack(fill="x", pady=(0, 2))
+        ctk.CTkLabel(cat_hdr, text="Therapeutic Category *", font=accessibility_manager.get_font(13, weight="bold"), text_color=Theme.TEXT_MAIN).pack(side="left")
+        self.lbl_cat_match = ctk.CTkLabel(cat_hdr, text="Loading categories...", font=accessibility_manager.get_font(11), text_color=Theme.TEXT_MUTED)
+        self.lbl_cat_match.pack(side="right")
+
+        cat_search_box = ctk.CTkFrame(container, fg_color="transparent")
+        cat_search_box.pack(fill="x", pady=(2, 4))
+
+        self.entry_cat_search = ctk.CTkEntry(
+            cat_search_box,
+            placeholder_text="🔍 Search category (e.g. Analgesics, Antibiotics, Cardiac)...",
+            height=36,
+            border_color=Theme.BORDER,
+            font=accessibility_manager.get_font(12)
+        )
+        self.entry_cat_search.pack(side="left", fill="x", expand=True, padx=(0, 6))
+        self.entry_cat_search.bind("<KeyRelease>", self._filter_categories)
+        self.entry_cat_search.bind("<Return>", self._on_cat_search_enter)
+
+        self.btn_clear_cat = ctk.CTkButton(
+            cat_search_box,
+            text="✕",
+            width=36,
+            height=36,
+            corner_radius=Theme.RADIUS_INPUT,
+            fg_color=Theme.BG_MUTED,
+            hover_color=Theme.BORDER,
+            text_color=Theme.TEXT_MUTED,
+            font=accessibility_manager.get_font(12, weight="bold"),
+            command=self._clear_cat_search
+        )
+        self.btn_clear_cat.pack(side="right")
+
         self.category_var = ctk.StringVar(value="Loading categories...")
-        self.category_opt = ctk.CTkOptionMenu(container, variable=self.category_var, values=["Loading..."], height=38, font=accessibility_manager.get_font(13))
-        self.category_opt.pack(fill="x", pady=(2, 8))
+        self.category_opt = ctk.CTkOptionMenu(
+            container,
+            variable=self.category_var,
+            values=["Loading..."],
+            height=38,
+            font=accessibility_manager.get_font(12)
+        )
+        self.category_opt.pack(fill="x", pady=(0, 8))
 
         # 2 Columns for Manufacturer & Unit
         row1 = ctk.CTkFrame(container, fg_color="transparent")
@@ -146,7 +185,7 @@ class MedicineModal(ctk.CTkToplevel):
 
     def _load_categories(self):
         run_in_background(
-            lambda: self.api_client.list_categories(),
+            lambda: self.api_client.list_categories(limit=1000),
             on_success=self._populate_categories,
             on_error=lambda e: self._on_err(f"Failed loading categories: {e}")
         )
@@ -155,16 +194,51 @@ class MedicineModal(ctk.CTkToplevel):
         if not categories:
             self.category_opt.configure(values=["No categories found - Add one first"])
             self.category_var.set("No categories found - Add one first")
+            self.lbl_cat_match.configure(text="0 categories")
             return
 
+        self.raw_categories = categories
         self.categories_map = {c["name"]: c["id"] for c in categories}
         cat_names = list(self.categories_map.keys())
         self.category_opt.configure(values=cat_names)
+        self.lbl_cat_match.configure(text=f"{len(cat_names)} categories")
 
         if self.medicine and self.medicine.get("category_name") in self.categories_map:
             self.category_var.set(self.medicine["category_name"])
         else:
             self.category_var.set(cat_names[0])
+
+    def _filter_categories(self, event=None):
+        q = self.entry_cat_search.get().strip().lower()
+        if not hasattr(self, "raw_categories") or not self.raw_categories:
+            return
+
+        if not q:
+            matches = list(self.categories_map.keys())
+            self.lbl_cat_match.configure(text=f"{len(matches)} categories")
+        else:
+            matches = [
+                c["name"] for c in self.raw_categories
+                if q in c["name"].lower() or (c.get("description") and q in c["description"].lower())
+            ]
+            self.lbl_cat_match.configure(text=f"{len(matches)} matching" if matches else "0 matches")
+
+        if matches:
+            self.category_opt.configure(values=matches)
+            if self.category_var.get() not in matches:
+                self.category_var.set(matches[0])
+        else:
+            self.category_opt.configure(values=["No matching categories found"])
+            self.category_var.set("No matching categories found")
+
+    def _on_cat_search_enter(self, event=None):
+        if hasattr(self, "entry_mfg"):
+            self.entry_mfg.focus_set()
+
+    def _clear_cat_search(self):
+        self.entry_cat_search.delete(0, "end")
+        self._filter_categories()
+        self.entry_cat_search.focus_set()
 
     def _save(self):
         code = self.entry_code.get().strip().upper()
@@ -212,9 +286,9 @@ class MedicineModal(ctk.CTkToplevel):
             self.on_success()
         self.destroy()
 
-    def _on_err(self, msg: str):
+    def _on_err(self, msg: Any):
         self.btn_save.configure(state="normal", text="Save Product")
-        clean_msg = msg.replace("RuntimeError: ", "")
+        clean_msg = str(msg).replace("RuntimeError: ", "")
         self.lbl_error.configure(text=clean_msg)
 
 
@@ -326,8 +400,22 @@ class MedicineView(ctk.CTkFrame):
             border_color=Theme.BORDER,
             font=accessibility_manager.get_font(12)
         )
-        self.search_entry.pack(side="left", fill="x", expand=True, padx=(0, 8))
+        self.search_entry.pack(side="left", fill="x", expand=True, padx=(0, 6))
         self.search_entry.bind("<KeyRelease>", self._apply_filters)
+
+        self.btn_clear_search = ctk.CTkButton(
+            filter_bar,
+            text="✕",
+            width=38,
+            height=38,
+            corner_radius=Theme.RADIUS_PILL,
+            fg_color=Theme.BG_MUTED,
+            hover_color=Theme.BORDER,
+            text_color=Theme.TEXT_MUTED,
+            font=accessibility_manager.get_font(12, weight="bold"),
+            command=self._clear_search
+        )
+        self.btn_clear_search.pack(side="left", padx=(0, 8))
 
         # Category Filter Dropdown
         self.cat_filter_var = ctk.StringVar(value="All Categories")
@@ -384,7 +472,7 @@ class MedicineView(ctk.CTkFrame):
         actions = [
             {"icon": "👁 View", "width": 58, "command": self._view_details},
             {"icon": "✏ Edit", "width": 54, "command": self._open_edit_modal},
-            {"icon": "🗑 Archive", "width": 68, "fg_color": Theme.DANGER_BG, "hover_color": "#FCA5A5", "text_color": Theme.DANGER_TEXT, "command": self._prompt_archive}
+            {"icon": "🗑 Delete", "width": 68, "fg_color": Theme.DANGER_BG, "hover_color": "#FCA5A5", "text_color": Theme.DANGER_TEXT, "command": self._prompt_delete}
         ]
 
         self.table = DataTable(
@@ -445,21 +533,22 @@ class MedicineView(ctk.CTkFrame):
     def _open_edit_modal(self, medicine):
         MedicineModal(self.winfo_toplevel(), self.api_client, medicine=medicine, on_success=self.load_medicines)
 
-    def _prompt_archive(self, medicine):
+    def _prompt_delete(self, medicine):
         ConfirmDialog(
             self.winfo_toplevel(),
-            title=f"Archive '{medicine['name']}'?",
-            message="Archiving will deactivate this product from the active catalog and POS checkout while preserving historical audit logs.",
-            confirm_text="Archive Medicine",
+            title=f"Delete '{medicine['name']}'?",
+            message="Are you sure you want to remove this product? If it has no stock batches, it will be deleted permanently. If it has historical batches, it will be deactivated.",
+            confirm_text="Delete Product",
             is_destructive=True,
-            on_confirm=lambda: self._execute_archive(medicine["id"])
+            on_confirm=lambda: self._execute_delete(medicine["id"])
         )
 
-    def _execute_archive(self, med_id: str):
+    def _execute_delete(self, med_id: str):
+        self.lbl_count.configure(text="⏳ Removing product from catalog...", text_color=Theme.TEXT_MUTED)
         run_in_background(
-            lambda: self.api_client.deactivate_medicine(med_id),
+            lambda: self.api_client.delete_medicine(med_id),
             on_success=lambda _: self.load_medicines(),
-            on_error=lambda e: self.lbl_count.configure(text=f"Error: {e}", text_color=Theme.DANGER_TEXT)
+            on_error=lambda e: self.lbl_count.configure(text=f"Error removing product: {e}", text_color=Theme.DANGER_TEXT)
         )
 
     def _apply_filters(self, event=None):
@@ -505,10 +594,15 @@ class MedicineView(ctk.CTkFrame):
 
         self.table.filter(match)
 
+    def _clear_search(self):
+        self.search_entry.delete(0, "end")
+        self._apply_filters()
+        self.search_entry.focus()
+
     def load_medicines(self):
         self.lbl_count.configure(text="⏳ Querying database via FastAPI...", text_color=Theme.TEXT_MUTED)
         run_in_background(
-            lambda: self.api_client.list_medicines(),
+            lambda: self.api_client.list_medicines(limit=1000),
             on_success=self._render_medicines,
             on_error=lambda e: self.lbl_count.configure(text=f"API Error: {e}", text_color=Theme.DANGER_TEXT)
         )
@@ -540,3 +634,5 @@ class MedicineView(ctk.CTkFrame):
             text_color=Theme.TEXT_MUTED
         )
         self.table.set_data(self.raw_medicines)
+        if self.search_entry.get().strip() or self.cat_filter_var.get() != "All Categories" or self.stock_filter_var.get() != "All Stock Levels" or self.status_filter_var.get() != "All Statuses":
+            self._apply_filters()

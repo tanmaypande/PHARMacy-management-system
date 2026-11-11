@@ -16,7 +16,7 @@ def create_category(payload: CategoryCreate, db: Session = Depends(get_db)):
 
 
 @router.get("", response_model=List[CategoryResponse])
-def list_categories(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def list_categories(skip: int = 0, limit: int = 1000, db: Session = Depends(get_db)):
     service = CategoryService(db)
     return service.list_categories(skip=skip, limit=limit)
 

@@ -56,7 +56,7 @@ class APIClient:
         return self._handle_response(res)
 
     # Categories
-    def list_categories(self, skip: int = 0, limit: int = 100) -> List[Dict[str, Any]]:
+    def list_categories(self, skip: int = 0, limit: int = 1000) -> List[Dict[str, Any]]:
         url = f"{self.base_url}/api/v1/categories?skip={skip}&limit={limit}"
         res = requests.get(url, headers=self._headers(), timeout=self.timeout)
         return self._handle_response(res)
@@ -85,7 +85,7 @@ class APIClient:
         category_id: Optional[str] = None,
         is_active: Optional[bool] = None,
         skip: int = 0,
-        limit: int = 100
+        limit: int = 500
     ) -> List[Dict[str, Any]]:
         params = [f"skip={skip}", f"limit={limit}"]
         if search:
@@ -120,6 +120,11 @@ class APIClient:
         res = requests.delete(url, headers=self._headers(), timeout=self.timeout)
         return self._handle_response(res)
 
+    def delete_medicine(self, medicine_id: str) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/medicines/{medicine_id}/hard"
+        res = requests.delete(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
     # Batches (Inventory)
     def list_batches(self, medicine_id: Optional[str] = None) -> List[Dict[str, Any]]:
         url = f"{self.base_url}/api/v1/batches"
@@ -144,7 +149,7 @@ class APIClient:
         res = requests.post(url, json=payload, headers=self._headers(), timeout=self.timeout)
         return self._handle_response(res)
 
-    def list_sales(self, limit: int = 50, offset: int = 0, search: Optional[str] = None) -> List[Dict[str, Any]]:
+    def list_sales(self, limit: int = 1000, offset: int = 0, search: Optional[str] = None) -> List[Dict[str, Any]]:
         url = f"{self.base_url}/api/v1/sales?limit={limit}&offset={offset}"
         if search:
             url += f"&search={requests.utils.quote(search)}"
@@ -172,3 +177,136 @@ class APIClient:
             url += f"?medicine_id={medicine_id}"
         res = requests.get(url, headers=self._headers(), timeout=self.timeout)
         return self._handle_response(res)
+
+    def return_sale(self, sale_id: str, reason: str = "Customer Return") -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/sales/{sale_id}/return?reason={requests.utils.quote(reason)}"
+        res = requests.post(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    # Auth & Users
+    def login(self, username: str, password: str) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/auth/login"
+        res = requests.post(url, json={"username": username, "password": password}, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def list_users(self) -> List[Dict[str, Any]]:
+        url = f"{self.base_url}/api/v1/auth/users"
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def create_user(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/auth/users"
+        res = requests.post(url, json=payload, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def toggle_user_active(self, user_id: str) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/auth/users/{user_id}/toggle-active"
+        res = requests.put(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    # Suppliers
+    def list_suppliers(self, search: Optional[str] = None) -> List[Dict[str, Any]]:
+        url = f"{self.base_url}/api/v1/suppliers"
+        if search:
+            url += f"?search={requests.utils.quote(search)}"
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def create_supplier(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/suppliers"
+        res = requests.post(url, json=payload, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def update_supplier(self, supplier_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/suppliers/{supplier_id}"
+        res = requests.put(url, json=payload, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def delete_supplier(self, supplier_id: str) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/suppliers/{supplier_id}"
+        res = requests.delete(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    # Customers
+    def list_customers(self, search: Optional[str] = None) -> List[Dict[str, Any]]:
+        url = f"{self.base_url}/api/v1/customers"
+        if search:
+            url += f"?search={requests.utils.quote(search)}"
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def create_customer(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/customers"
+        res = requests.post(url, json=payload, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def update_customer(self, customer_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/customers/{customer_id}"
+        res = requests.put(url, json=payload, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def delete_customer(self, customer_id: str) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/customers/{customer_id}"
+        res = requests.delete(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    # Purchases
+    def list_purchases(self) -> List[Dict[str, Any]]:
+        url = f"{self.base_url}/api/v1/purchases"
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def create_purchase(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/purchases"
+        res = requests.post(url, json=payload, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    # Prescriptions
+    def list_prescriptions(self, customer_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        url = f"{self.base_url}/api/v1/prescriptions"
+        if customer_id:
+            url += f"?customer_id={customer_id}"
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def create_prescription(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/prescriptions"
+        res = requests.post(url, json=payload, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def delete_prescription(self, prescription_id: str) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/prescriptions/{prescription_id}"
+        res = requests.delete(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    # Reports, Settings & Backup
+    def get_sales_report(self, days: int = 30) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/reports/sales-summary?days={days}"
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def get_inventory_valuation(self) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/reports/inventory-valuation"
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def export_sales_csv(self, days: int = 30) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/reports/export-sales-csv?days={days}"
+        res = requests.post(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def create_backup(self) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/reports/backup"
+        res = requests.post(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def get_store_settings(self) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/reports/settings"
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def update_store_settings(self, settings_dict: Dict[str, str]) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/reports/settings"
+        res = requests.post(url, json={"settings": settings_dict}, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+

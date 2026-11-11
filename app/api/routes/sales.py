@@ -103,3 +103,16 @@ def get_sale_by_invoice(invoice_number: str, db: Session = Depends(get_db)):
             detail=f"Invoice '{invoice_number}' not found."
         )
     return sale
+
+
+@router.post(
+    "/{sale_id}/return",
+    summary="Process customer return / refund",
+    description="Restores batch inventory units and marks invoice as REFUNDED."
+)
+def return_sale(sale_id: uuid.UUID, reason: Optional[str] = "Customer Return", db: Session = Depends(get_db)):
+    try:
+        return BillingService.process_return(db, sale_id=sale_id, reason=reason or "Customer Return")
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+

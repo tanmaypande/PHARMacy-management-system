@@ -6,17 +6,21 @@ from app.ui.components.badge import StatusBadge
 
 class SettingsView(ctk.CTkFrame):
     """
-    Healthcare SaaS Accessibility and Application Settings View.
+    Healthcare SaaS Accessibility, Store Identity, and Application Settings View.
     Fulfills TQM Goal Q12 — Improve Accessibility with:
     - Default Light Theme, Dark Theme, and High-Contrast Mode
     - Dynamic font scaling (100% - 140%) with live font recalculation
+    - Pharmacy Store Identity & GSTIN Configuration
+    - One-Click Disaster Recovery Database Backup
     - Non-color-exclusive status indicators
-    - Architectural integrity validation display
     """
-    def __init__(self, master, on_theme_change=None):
+    def __init__(self, master, api_client=None, on_theme_change=None):
         super().__init__(master, fg_color="transparent")
+        self.api_client = api_client
         self.on_theme_change = on_theme_change
         self._build_ui()
+        if self.api_client:
+            self._load_store_settings()
 
     def _build_ui(self):
         # Scrollable container so all settings fit comfortably at any scaling
@@ -191,7 +195,99 @@ class SettingsView(ctk.CTkFrame):
         )
         self.lbl_preview.pack(anchor="w", padx=14, pady=(0, 10))
 
-        # ---------------- Section 3: TQM Q12 Quality & Architecture Controls ----------------
+        # ---------------- Section 3: Pharmacy Store Profile & GSTIN ----------------
+        card_store = ctk.CTkFrame(scroll, fg_color=Theme.BG_CARD, corner_radius=12, border_width=1, border_color=Theme.BORDER)
+        card_store.pack(fill="x", pady=(0, 16))
+
+        ctk.CTkLabel(
+            card_store,
+            text="🏥 Pharmacy Business Identity & Billing Header",
+            font=accessibility_manager.get_font(15, weight="bold"),
+            text_color=Theme.TEXT_MAIN
+        ).pack(anchor="w", padx=20, pady=(16, 4))
+
+        ctk.CTkLabel(
+            card_store,
+            text="Printed on customer receipts, invoices, and regulatory compliance documents.",
+            font=accessibility_manager.get_font(12),
+            text_color=Theme.TEXT_MUTED
+        ).pack(anchor="w", padx=20, pady=(0, 12))
+
+        s_box = ctk.CTkFrame(card_store, fg_color="transparent")
+        s_box.pack(fill="x", padx=20, pady=(0, 14))
+
+        ctk.CTkLabel(s_box, text="Pharmacy Trade Name *", font=accessibility_manager.get_font(12, weight="bold")).pack(anchor="w")
+        self.entry_store_name = ctk.CTkEntry(s_box, height=36)
+        self.entry_store_name.pack(fill="x", pady=(2, 8))
+
+        ctk.CTkLabel(s_box, text="Store Address", font=accessibility_manager.get_font(12)).pack(anchor="w")
+        self.entry_store_addr = ctk.CTkEntry(s_box, height=36)
+        self.entry_store_addr.pack(fill="x", pady=(2, 8))
+
+        row_gst = ctk.CTkFrame(s_box, fg_color="transparent")
+        row_gst.pack(fill="x", pady=(0, 8))
+
+        c_gst = ctk.CTkFrame(row_gst, fg_color="transparent")
+        c_gst.pack(side="left", fill="x", expand=True, padx=(0, 6))
+        ctk.CTkLabel(c_gst, text="GSTIN / Drug License #", font=accessibility_manager.get_font(12)).pack(anchor="w")
+        self.entry_store_gst = ctk.CTkEntry(c_gst, height=36)
+        self.entry_store_gst.pack(fill="x", pady=(2, 0))
+
+        c_ph = ctk.CTkFrame(row_gst, fg_color="transparent")
+        c_ph.pack(side="right", fill="x", expand=True, padx=(6, 0))
+        ctk.CTkLabel(c_ph, text="Contact Phone", font=accessibility_manager.get_font(12)).pack(anchor="w")
+        self.entry_store_phone = ctk.CTkEntry(c_ph, height=36)
+        self.entry_store_phone.pack(fill="x", pady=(2, 0))
+
+        btn_save_store = ctk.CTkButton(
+            s_box,
+            text="💾 Save Store Profile",
+            height=36,
+            fg_color=Theme.PRIMARY,
+            command=self._save_store_settings
+        )
+        btn_save_store.pack(anchor="w", pady=(10, 0))
+
+        # ---------------- Section 4: Disaster Recovery & Database Backup ----------------
+        card_backup = ctk.CTkFrame(scroll, fg_color=Theme.BG_CARD, corner_radius=12, border_width=1, border_color=Theme.BORDER)
+        card_backup.pack(fill="x", pady=(0, 16))
+
+        ctk.CTkLabel(
+            card_backup,
+            text="💾 Disaster Recovery & Database Backup",
+            font=accessibility_manager.get_font(15, weight="bold"),
+            text_color=Theme.TEXT_MAIN
+        ).pack(anchor="w", padx=20, pady=(16, 4))
+
+        ctk.CTkLabel(
+            card_backup,
+            text="Generates an offline point-in-time PostgreSQL snapshot for audit and disaster protection.",
+            font=accessibility_manager.get_font(12),
+            text_color=Theme.TEXT_MUTED
+        ).pack(anchor="w", padx=20, pady=(0, 12))
+
+        b_box = ctk.CTkFrame(card_backup, fg_color="transparent")
+        b_box.pack(fill="x", padx=20, pady=(0, 16))
+
+        self.btn_backup = ctk.CTkButton(
+            b_box,
+            text="⚡ Create Instant Database Backup",
+            height=36,
+            fg_color=Theme.SECONDARY,
+            text_color=Theme.SECONDARY_TEXT,
+            command=self._trigger_backup
+        )
+        self.btn_backup.pack(side="left", padx=(0, 10))
+
+        self.lbl_backup_status = ctk.CTkLabel(
+            b_box,
+            text="Status: Ready",
+            font=accessibility_manager.get_font(12),
+            text_color=Theme.TEXT_MUTED
+        )
+        self.lbl_backup_status.pack(side="left")
+
+        # ---------------- Section 5: TQM Q12 Quality & Architecture Controls ----------------
         card_tqm = ctk.CTkFrame(scroll, fg_color=Theme.BG_CARD, corner_radius=12, border_width=1, border_color=Theme.BORDER)
         card_tqm.pack(fill="x", pady=(0, 16))
 
@@ -240,6 +336,59 @@ class SettingsView(ctk.CTkFrame):
     def _set_preset(self, val: float):
         self.slider.set(val)
         self._on_slider_change(val)
+
+    def _load_store_settings(self):
+        from app.ui.common.async_task import run_in_background
+        def _fetch():
+            return self.api_client.get_store_settings()
+
+        def _on_done(settings):
+            if not settings:
+                return
+            if "store_name" in settings:
+                self.entry_store_name.delete(0, "end")
+                self.entry_store_name.insert(0, settings["store_name"])
+            if "store_address" in settings:
+                self.entry_store_addr.delete(0, "end")
+                self.entry_store_addr.insert(0, settings["store_address"])
+            if "store_gstin" in settings:
+                self.entry_store_gst.delete(0, "end")
+                self.entry_store_gst.insert(0, settings["store_gstin"])
+            if "store_phone" in settings:
+                self.entry_store_phone.delete(0, "end")
+                self.entry_store_phone.insert(0, settings["store_phone"])
+
+        run_in_background(_fetch, on_success=_on_done)
+
+    def _save_store_settings(self):
+        from app.ui.common.async_task import run_in_background
+        import tkinter.messagebox as msg
+
+        payload = {
+            "store_name": self.entry_store_name.get().strip() or "MediCare Pharmacy",
+            "store_address": self.entry_store_addr.get().strip(),
+            "store_gstin": self.entry_store_gst.get().strip(),
+            "store_phone": self.entry_store_phone.get().strip(),
+        }
+
+        def _do():
+            return self.api_client.update_store_settings(payload)
+
+        run_in_background(_do, on_success=lambda _: msg.showinfo("Settings Saved", "Store profile updated successfully!"))
+
+    def _trigger_backup(self):
+        from app.ui.common.async_task import run_in_background
+        self.btn_backup.configure(state="disabled", text="Backing up...")
+        self.lbl_backup_status.configure(text="Creating snapshot...")
+
+        def _do():
+            return self.api_client.create_backup()
+
+        def _on_done(res):
+            self.btn_backup.configure(state="normal", text="⚡ Create Instant Database Backup")
+            self.lbl_backup_status.configure(text=f"Backup Saved: {res.get('file_path')}")
+
+        run_in_background(_do, on_success=_on_done)
 
     def _on_slider_change(self, val: float):
         pct = int(round(val * 100))
