@@ -310,3 +310,65 @@ class APIClient:
         res = requests.post(url, json={"settings": settings_dict}, headers=self._headers(), timeout=self.timeout)
         return self._handle_response(res)
 
+    # TQM Quality Management
+    def list_tqm_records(self, category: Optional[str] = None, status: Optional[str] = None) -> List[Dict[str, Any]]:
+        url = f"{self.base_url}/api/v1/tqm/records"
+        params = []
+        if category:
+            params.append(f"category={requests.utils.quote(category)}")
+        if status:
+            params.append(f"status={requests.utils.quote(status)}")
+        if params:
+            url += "?" + "&".join(params)
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def create_tqm_record(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/tqm/records"
+        res = requests.post(url, json=payload, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def update_tqm_record(self, record_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/tqm/records/{record_id}"
+        res = requests.put(url, json=payload, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def delete_tqm_record(self, record_id: str) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/tqm/records/{record_id}"
+        res = requests.delete(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def get_tqm_kpis(self) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/tqm/kpis"
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    # Policies & SOPs
+    def list_policies(self, search: Optional[str] = None, category: Optional[str] = None) -> List[Dict[str, Any]]:
+        url = f"{self.base_url}/api/v1/policies"
+        params = []
+        if search:
+            params.append(f"search={requests.utils.quote(search)}")
+        if category:
+            params.append(f"category={requests.utils.quote(category)}")
+        if params:
+            url += "?" + "&".join(params)
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def create_policy(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/policies"
+        res = requests.post(url, json=payload, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def update_policy(self, policy_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/policies/{policy_id}"
+        res = requests.put(url, json=payload, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def delete_policy(self, policy_id: str) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/policies/{policy_id}"
+        res = requests.delete(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+

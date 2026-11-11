@@ -27,6 +27,8 @@ from app.ui.suppliers.supplier_view import SupplierView
 from app.ui.customers.customer_view import CustomerView
 from app.ui.prescriptions.prescription_view import PrescriptionView
 from app.ui.reports.reports_view import ReportsView
+from app.ui.tqm.tqm_view import TQMView
+from app.ui.policies.policy_view import PolicyView
 from app.ui.users.users_view import UsersView
 from app.ui.settings.settings_view import SettingsView
 
@@ -58,7 +60,9 @@ class MainWindow(ctk.CTk):
             ("suppliers", "🏢", "Suppliers", "Wholesale Suppliers", "Pharmaceutical distributor registry"),
             ("customers", "👥", "Customers", "Patient Records", "Patient directory and medication profiles"),
             ("prescriptions", "📋", "Prescriptions", "Clinical Prescriptions", "Prescriber registry and Rx profile links"),
-            ("reports", "📈", "Reports & TQM", "TQM Quality Reports", "Quality Pareto metrics and expiration logs"),
+            ("reports", "📈", "Reports", "Financial & Sales Reports", "Sales summaries, inventory valuation, and exports"),
+            ("tqm", "🛡️", "TQM Quality", "Total Quality Management", "Quality audits, CAPA actions, and compliance KPIs"),
+            ("policies", "📜", "Policies & SOP", "Pharmacy Governance", "Standard Operating Procedures and storage rules"),
             ("users", "👤", "Users & Roles", "Users & Permissions", "Role-Based Access Control (RBAC) & Audit Log"),
             ("settings", "⚙", "Settings", "System Settings", "TQM Q12 Accessibility and interface preferences"),
         ]
@@ -569,6 +573,16 @@ class MainWindow(ctk.CTk):
             )
         elif key == "reports":
             self.current_view_widget = ReportsView(
+                self.view_container,
+                self.api_client
+            )
+        elif key == "tqm":
+            self.current_view_widget = TQMView(
+                self.view_container,
+                self.api_client
+            )
+        elif key == "policies":
+            self.current_view_widget = PolicyView(
                 self.view_container,
                 self.api_client
             )

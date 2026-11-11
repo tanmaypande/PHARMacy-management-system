@@ -13,6 +13,8 @@ from app.api.routes.customers import router as customers_router
 from app.api.routes.purchases import router as purchases_router
 from app.api.routes.prescriptions import router as prescriptions_router
 from app.api.routes.reports import router as reports_router
+from app.api.routes.tqm import router as tqm_router
+from app.api.routes.policies import router as policies_router
 
 app = FastAPI(
     title="Pharmacy Management System API",
@@ -32,6 +34,8 @@ app.include_router(customers_router)
 app.include_router(purchases_router)
 app.include_router(prescriptions_router)
 app.include_router(reports_router)
+app.include_router(tqm_router)
+app.include_router(policies_router)
 
 
 @app.get("/health", tags=["Health & Monitoring"])

@@ -11,6 +11,8 @@ from app.models.user import User, AuditLog
 from app.models.purchase import Purchase, PurchaseItem
 from app.models.prescription import Prescription
 from app.models.store_setting import StoreSetting
+from app.models.tqm import TQMRecord
+from app.models.policy import Policy
 
 __all__ = [
     "Category",
@@ -26,4 +28,6 @@ __all__ = [
     "PurchaseItem",
     "Prescription",
     "StoreSetting",
+    "TQMRecord",
+    "Policy",
 ]
