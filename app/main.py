@@ -18,13 +18,40 @@ if str(PROJECT_ROOT) not in sys.path:
 from app.core.config import settings
 
 
+def get_python_executable() -> str:
+    """Resolve virtualenv python executable if available, falling back to sys.executable."""
+    venv_py = PROJECT_ROOT / ".venv" / "Scripts" / "python.exe"
+    if venv_py.exists():
+        return str(venv_py)
+    return sys.executable
+
+
 def is_backend_healthy() -> bool:
     url = f"http://{settings.API_HOST}:{settings.API_PORT}/health"
     try:
-        with urllib.request.urlopen(url, timeout=1.5) as resp:
+        req = urllib.request.Request(url, headers={"User-Agent": "MediCare-Launcher"})
+        with urllib.request.urlopen(req, timeout=2.0) as resp:
             return resp.status == 200
     except Exception:
         return False
+
+
+def free_port_if_blocked(port: int = 8000):
+    """If port is occupied by a dead/unresponsive process, terminate it to allow clean binding."""
+    if is_backend_healthy():
+        return
+    try:
+        output = subprocess.check_output(f"netstat -ano | findstr :{port}", shell=True, text=True, stderr=subprocess.DEVNULL)
+        for line in output.splitlines():
+            line = line.strip()
+            if f":{port}" in line and ("LISTENING" in line or "SYN_SENT" in line):
+                parts = line.split()
+                pid = parts[-1]
+                if pid and pid != "0" and pid != str(os.getpid()):
+                    subprocess.run(f"taskkill /F /PID {pid}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    time.sleep(0.5)
+    except Exception:
+        pass
 
 
 def main():
@@ -39,9 +66,13 @@ def main():
     if is_backend_healthy():
         print(f"[OK] Backend API is already running at http://{settings.API_HOST}:{settings.API_PORT}")
     else:
-        print(f"[*] Starting FastAPI backend on http://{settings.API_HOST}:{settings.API_PORT}...")
+        # Free port if held by a zombie process
+        free_port_if_blocked(settings.API_PORT)
+
+        py_exec = get_python_executable()
+        print(f"[*] Starting FastAPI backend using {py_exec} on http://{settings.API_HOST}:{settings.API_PORT}...")
         cmd = [
-            sys.executable,
+            py_exec,
             "-m",
             "uvicorn",
             "app.main_api:app",
@@ -53,10 +84,10 @@ def main():
         backend_proc = subprocess.Popen(cmd, cwd=str(PROJECT_ROOT))
         started_by_us = True
 
-        # Wait for backend to become healthy (up to 12 seconds)
+        # Wait for backend to become healthy (up to 15 seconds)
         print("[*] Waiting for backend and database connection...", end="", flush=True)
         ready = False
-        for _ in range(24):
+        for _ in range(30):
             time.sleep(0.5)
             print(".", end="", flush=True)
             if is_backend_healthy():

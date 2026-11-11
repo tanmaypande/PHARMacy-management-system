@@ -23,6 +23,7 @@ class DataTable(ctk.CTkFrame):
         columns: List[Dict[str, Any]],
         data: Optional[List[Dict[str, Any]]] = None,
         page_size: int = 10,
+        rows_per_page: Optional[int] = None,
         actions: Optional[List[Dict[str, Any]]] = None,
         empty_title: str = "No Records Found",
         empty_desc: str = "There are no records matching the current criteria.",
@@ -32,7 +33,7 @@ class DataTable(ctk.CTkFrame):
         self.columns = columns
         self.raw_data = data or []
         self.filtered_data = list(self.raw_data)
-        self.page_size = page_size
+        self.page_size = rows_per_page or page_size
         self.current_page = 1
         self.sort_key: Optional[str] = None
         self.sort_ascending: bool = True

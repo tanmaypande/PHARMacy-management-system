@@ -13,9 +13,10 @@ class StatCard(ctk.CTkFrame):
         master,
         title: str,
         value: str,
-        subtitle: str,
-        icon: str,
+        subtitle: str = "",
+        icon: str = "📊",
         accent_color=None,
+        variant: str = None,
         **kwargs
     ):
         super().__init__(

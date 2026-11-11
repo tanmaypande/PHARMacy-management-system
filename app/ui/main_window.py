@@ -605,8 +605,7 @@ class MainWindow(ctk.CTk):
                     is_api_up = health.get("api_service") == "running"
                     if not is_api_up:
                         consecutive_offline += 1
-                        if consecutive_offline >= 2:
-                            self._ensure_backend_process()
+                        self._ensure_backend_process()
                     else:
                         consecutive_offline = 0
 
@@ -637,12 +636,14 @@ class MainWindow(ctk.CTk):
                     _gui_queue.put((self._render_health, (health, alerts_list), {}))
                 except Exception:
                     consecutive_offline += 1
-                    if consecutive_offline >= 2:
-                        self._ensure_backend_process()
+                    self._ensure_backend_process()
                     if not self._monitor_running:
                         break
                     _gui_queue.put((self._render_health, ({}, []), {}))
-                time.sleep(10)
+
+                # Fast 2s poll while offline/reconnecting, normal 10s poll when healthy
+                poll_delay = 2 if consecutive_offline > 0 else 10
+                time.sleep(poll_delay)
 
         threading.Thread(target=_loop, daemon=True).start()
 
@@ -656,8 +657,10 @@ class MainWindow(ctk.CTk):
 
             if not hasattr(self, "_spawned_backend") or self._spawned_backend is None or self._spawned_backend.poll() is not None:
                 project_root = Path(__file__).resolve().parent.parent.parent
+                venv_py = project_root / ".venv" / "Scripts" / "python.exe"
+                py_exec = str(venv_py) if venv_py.exists() else sys.executable
                 cmd = [
-                    sys.executable,
+                    py_exec,
                     "-m",
                     "uvicorn",
                     "app.main_api:app",
