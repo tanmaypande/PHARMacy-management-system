@@ -106,6 +106,14 @@ class MedicineBatch(Base):
         back_populates="batches"
     )
 
+    @property
+    def current_stock(self) -> int:
+        return self.quantity
+
+    @current_stock.setter
+    def current_stock(self, val: int):
+        self.quantity = val
+
     def is_expired(self) -> bool:
         """Returns True if the batch has passed its expiration date."""
         return self.expiry_date < date.today()

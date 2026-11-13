@@ -24,6 +24,16 @@ class Prescription(Base):
         nullable=False,
         index=True
     )
+    pharmacy_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("pharmacies.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True
+    )
+    prescription_number: Mapped[Optional[str]] = mapped_column(
+        String(50),
+        nullable=True,
+        index=True
+    )
     doctor_name: Mapped[str] = mapped_column(
         String(100),
         nullable=False
@@ -32,6 +42,14 @@ class Prescription(Base):
         String(50),
         nullable=True
     )
+
+    @property
+    def doctor_registration(self) -> Optional[str]:
+        return self.doctor_license
+
+    @doctor_registration.setter
+    def doctor_registration(self, val: Optional[str]):
+        self.doctor_license = val
     prescription_date: Mapped[date] = mapped_column(
         Date,
         default=lambda: datetime.now(timezone.utc).date(),
@@ -39,6 +57,25 @@ class Prescription(Base):
     )
     diagnosis: Mapped[Optional[str]] = mapped_column(
         String(200),
+        nullable=True
+    )
+    status: Mapped[str] = mapped_column(
+        String(30),
+        default="Pending",
+        nullable=False,
+        index=True,
+        doc="Pending, Verified, Dispensed, Rejected"
+    )
+    verified_by: Mapped[Optional[str]] = mapped_column(
+        String(50),
+        nullable=True
+    )
+    dispensing_notes: Mapped[Optional[str]] = mapped_column(
+        Text,
+        nullable=True
+    )
+    verified_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
         nullable=True
     )
     notes: Mapped[Optional[str]] = mapped_column(

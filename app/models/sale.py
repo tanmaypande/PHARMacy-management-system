@@ -131,6 +131,10 @@ class Sale(Base):
         order_by="SaleItem.created_at"
     )
 
+    @property
+    def sale_date(self) -> datetime:
+        return self.created_at
+
     def __repr__(self) -> str:
         return f"<Sale(invoice='{self.invoice_number}', total={self.total_amount})>"
 
@@ -215,6 +219,10 @@ class SaleItem(Base):
     sale: Mapped["Sale"] = relationship("Sale", back_populates="items")
     medicine: Mapped["Medicine"] = relationship("Medicine")
     batch: Mapped["MedicineBatch"] = relationship("MedicineBatch")
+
+    @property
+    def sale_date(self) -> datetime:
+        return self.created_at
 
     def __repr__(self) -> str:
         return f"<SaleItem(med='{self.medicine_name}', qty={self.quantity}, subtotal={self.subtotal})>"

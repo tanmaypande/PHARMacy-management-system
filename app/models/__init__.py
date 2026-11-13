@@ -13,6 +13,16 @@ from app.models.prescription import Prescription
 from app.models.store_setting import StoreSetting
 from app.models.tqm import TQMRecord
 from app.models.policy import Policy
+from app.models.pharmacy import (
+    Pharmacy,
+    Subscription,
+    Expense,
+    StockMovement,
+    SupportTicket,
+    Notification
+)
+from app.models.purchase_order import PurchaseOrder, PurchaseOrderItem
+from app.models.role import Role, Permission, RolePermission
 
 __all__ = [
     "Category",
@@ -30,4 +40,15 @@ __all__ = [
     "StoreSetting",
     "TQMRecord",
     "Policy",
+    "Pharmacy",
+    "Subscription",
+    "Expense",
+    "StockMovement",
+    "SupportTicket",
+    "Notification",
+    "PurchaseOrder",
+    "PurchaseOrderItem",
+    "Role",
+    "Permission",
+    "RolePermission",
 ]

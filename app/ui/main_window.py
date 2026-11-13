@@ -32,26 +32,37 @@ from app.ui.policies.policy_view import PolicyView
 from app.ui.users.users_view import UsersView
 from app.ui.settings.settings_view import SettingsView
 
+from app.ui.auth.login_view import LoginView
+from app.ui.super_admin.super_admin_view import SuperAdminView
+from app.ui.owner.owner_view import OwnerView
+from app.ui.pharmacist.pharmacist_view import PharmacistView
+from app.ui.cashier.cashier_view import CashierView
+from app.ui.inventory_manager.inventory_manager_view import InventoryManagerView
+from app.ui.supplier.supplier_portal_view import SupplierPortalView
+from app.ui.customer.customer_portal_view import CustomerPortalView
+
 
 class MainWindow(ctk.CTk):
-    def __init__(self):
-        super().__init__()
+    ROLE_ICONS = {
+        "super_admin": "👑",
+        "owner": "🏢",
+        "admin": "🏢",
+        "pharmacist": "🩺",
+        "cashier": "💳",
+        "inventory_manager": "📦",
+        "supplier": "🚚",
+        "customer": "👤",
+    }
 
-        self.title("MediCare Pharmacy Management System — Commercial & TQM Q12 Edition")
-        self.geometry("1240x800")
-        self.minsize(1020, 660)
-        self.configure(fg_color=Theme.BG_APP)
-
-        # Isolated API Client
-        self.api_client = APIClient(base_url="http://127.0.0.1:8000")
-        self.current_view_key = "dashboard"
-        self.current_view_widget = None
-        self._monitor_running = True
-        self.is_sidebar_collapsed = False
-
-        # Navigation specification: (key, icon, label, title, subtitle)
-        self.nav_items = [
-            ("dashboard", "📊", "Dashboard", "Operational Dashboard", "Clinical KPIs & TQM Quality Safeguards"),
+    ROLE_NAV_CONFIGS = {
+        "super_admin": [
+            ("super_admin", "👑", "Super Admin", "Super Admin Console", "Multi-Tenant & System Governance"),
+            ("users", "👤", "Users & Roles", "System User Directory", "Multi-tenant user administration"),
+            ("settings", "⚙", "Settings", "System Settings", "System preferences and configurations"),
+        ],
+        "owner": [
+            ("owner", "🏢", "Owner Dashboard", "Executive Business Dashboard", "P&L, operating expenses, and financial health"),
+            ("dashboard", "📊", "Operations", "Operational Dashboard", "Clinical KPIs & TQM Quality Safeguards"),
             ("medicines", "💊", "Medicines", "Medicines Formulary", "Master pharmaceutical items and formulations"),
             ("categories", "🗂", "Categories", "Drug Categories", "Therapeutic and clinical class grouping"),
             ("inventory", "📦", "Inventory", "Batch Inventory", "Lot tracking, expiry controls, and physical stock"),
@@ -65,7 +76,76 @@ class MainWindow(ctk.CTk):
             ("policies", "📜", "Policies & SOP", "Pharmacy Governance", "Standard Operating Procedures and storage rules"),
             ("users", "👤", "Users & Roles", "Users & Permissions", "Role-Based Access Control (RBAC) & Audit Log"),
             ("settings", "⚙", "Settings", "System Settings", "TQM Q12 Accessibility and interface preferences"),
-        ]
+        ],
+        "admin": [
+            ("owner", "🏢", "Owner Dashboard", "Executive Business Dashboard", "P&L, operating expenses, and financial health"),
+            ("dashboard", "📊", "Operations", "Operational Dashboard", "Clinical KPIs & TQM Quality Safeguards"),
+            ("medicines", "💊", "Medicines", "Medicines Formulary", "Master pharmaceutical items and formulations"),
+            ("categories", "🗂", "Categories", "Drug Categories", "Therapeutic and clinical class grouping"),
+            ("inventory", "📦", "Inventory", "Batch Inventory", "Lot tracking, expiry controls, and physical stock"),
+            ("sales", "🧾", "Sales & Billing", "Point of Sale & Dispensing", "Prescription fulfillment and counter billing"),
+            ("purchases", "🛒", "Purchases", "Inbound Purchases", "Wholesale purchase orders and receiving"),
+            ("suppliers", "🏢", "Suppliers", "Wholesale Suppliers", "Pharmaceutical distributor registry"),
+            ("customers", "👥", "Customers", "Patient Records", "Patient directory and medication profiles"),
+            ("prescriptions", "📋", "Prescriptions", "Clinical Prescriptions", "Prescriber registry and Rx profile links"),
+            ("reports", "📈", "Reports", "Financial & Sales Reports", "Sales summaries, inventory valuation, and exports"),
+            ("tqm", "🛡️", "TQM Quality", "Total Quality Management", "Quality audits, CAPA actions, and compliance KPIs"),
+            ("policies", "📜", "Policies & SOP", "Pharmacy Governance", "Standard Operating Procedures and storage rules"),
+            ("users", "👤", "Users & Roles", "Users & Permissions", "Role-Based Access Control (RBAC) & Audit Log"),
+            ("settings", "⚙", "Settings", "System Settings", "TQM Q12 Accessibility and interface preferences"),
+        ],
+        "pharmacist": [
+            ("pharmacist", "🩺", "Clinical Pharmacy", "Pharmacist Clinical Station", "Prescription verification, safety review, and dispensing"),
+            ("prescriptions", "📋", "Prescriptions", "Clinical Prescriptions", "Prescription archive and formulary links"),
+            ("medicines", "💊", "Medicines", "Medicines Formulary", "Formulations, indications, and drug catalog"),
+            ("inventory", "📦", "Inventory", "Batch Inventory", "Batch expiry & stock inspection"),
+            ("customers", "👥", "Patients", "Patient Directory", "Patient medication history and profiles"),
+            ("tqm", "🛡️", "TQM Quality", "Total Quality Management", "Quality audits, CAPA actions, and compliance KPIs"),
+            ("policies", "📜", "Policies & SOP", "Pharmacy Governance", "Standard Operating Procedures and storage rules"),
+            ("settings", "⚙", "Settings", "System Settings", "System preferences and accessibility"),
+        ],
+        "cashier": [
+            ("cashier", "💳", "Cashier POS", "Counter Billing & Cashier Station", "Fast point-of-sale register, discounts, receipts & returns"),
+            ("sales", "🧾", "Sales History", "Sales & Invoices", "Invoice history and reprints"),
+            ("customers", "👥", "Customers", "Customer Lookup", "Customer directory"),
+            ("settings", "⚙", "Settings", "System Settings", "System preferences"),
+        ],
+        "inventory_manager": [
+            ("inventory_manager", "📦", "Wholesale PO & Audit", "Wholesale POs & Stock Movements", "Wholesale ordering, receiving, physical count adjustments & audit trail"),
+            ("inventory", "📊", "Batch Inventory", "Batch Inventory", "Lot tracking, expiry controls, and physical stock"),
+            ("medicines", "💊", "Medicines Master", "Medicines Formulary", "Master pharmaceutical items and formulations"),
+            ("categories", "🗂", "Categories", "Drug Categories", "Therapeutic and clinical class grouping"),
+            ("suppliers", "🏢", "Suppliers", "Wholesale Suppliers", "Pharmaceutical distributor registry"),
+            ("settings", "⚙", "Settings", "System Settings", "System preferences"),
+        ],
+        "supplier": [
+            ("supplier", "🚚", "Distributor Portal", "Supplier / Distributor Portal", "Assigned purchase orders, confirmations, and settlement history"),
+            ("settings", "⚙", "Settings", "System Settings", "System preferences"),
+        ],
+        "customer": [
+            ("customer", "👤", "Patient Portal", "Patient & Customer Portal", "Formulary browsing, prescription upload, status tracking, and bills"),
+            ("settings", "⚙", "Settings", "System Settings", "System preferences"),
+        ],
+    }
+
+    def __init__(self, initial_user: Optional[Dict[str, Any]] = None):
+        super().__init__()
+
+        self.title("MediCare Pharmacy Management System — Commercial & Multi-Stakeholder Enterprise Edition")
+        self.geometry("1240x800")
+        self.minsize(1020, 660)
+        self.configure(fg_color=Theme.BG_APP)
+
+        # Isolated API Client
+        self.api_client = APIClient(base_url="http://127.0.0.1:8000")
+        self.current_user = initial_user
+        self.current_view_key = "dashboard"
+        self.current_view_widget = None
+        self._monitor_running = True
+        self.is_sidebar_collapsed = False
+
+        # Default navigation specification
+        self.nav_items = list(self.ROLE_NAV_CONFIGS["owner"])
 
         # Subscribe to accessibility updates
         accessibility_manager.subscribe(self._on_accessibility_change)
@@ -75,8 +155,12 @@ class MainWindow(ctk.CTk):
 
         self._build_layout()
         self._bind_keyboard_shortcuts()
-        self.navigate("dashboard")
         self._start_connection_monitor()
+
+        if self.current_user:
+            self._on_login_success(self.current_user)
+        else:
+            self._handle_logout()
 
     def _build_layout(self):
         self.grid_columnconfigure(0, weight=0, minsize=240)
@@ -166,45 +250,7 @@ class MainWindow(ctk.CTk):
         self.section_headers = []
         self._nav_row_counter = 0
 
-        def _add_section(label: str):
-            hdr = ctk.CTkLabel(
-                self.nav_scroll,
-                text=label,
-                font=accessibility_manager.get_font(9, weight="bold"),
-                text_color=Theme.TEXT_MUTED
-            )
-            hdr.grid(row=self._nav_row_counter, column=0, sticky="w", padx=12, pady=(10, 3))
-            self.section_headers.append(hdr)
-            self._nav_row_counter += 1
-
-        def _create_nav_button(key: str, icon: str, label: str):
-            btn = ctk.CTkButton(
-                self.nav_scroll,
-                text=f"  {icon}   {label}",
-                height=38,
-                corner_radius=10,
-                anchor="w",
-                fg_color="transparent",
-                text_color=Theme.TEXT_MUTED,
-                hover_color=Theme.SECONDARY_HOVER,
-                font=accessibility_manager.get_font(12),
-                command=lambda k=key: self.navigate(k)
-            )
-            btn.grid(row=self._nav_row_counter, column=0, sticky="ew", pady=2, padx=4)
-            self.nav_buttons[key] = btn
-            self._nav_row_counter += 1
-
-        _add_section("OPERATIONS")
-        for key, icon, label, _, _ in self.nav_items[:4]:
-            _create_nav_button(key, icon, label)
-
-        _add_section("TRANSACTIONS & DIRECTORY")
-        for key, icon, label, _, _ in self.nav_items[4:9]:
-            _create_nav_button(key, icon, label)
-
-        _add_section("QUALITY & SYSTEM")
-        for key, icon, label, _, _ in self.nav_items[9:]:
-            _create_nav_button(key, icon, label)
+        self._rebuild_nav_buttons()
 
         # ================= 2. Main Right Container =================
         self.right_container = ctk.CTkFrame(self, fg_color="transparent", corner_radius=0)
@@ -220,7 +266,8 @@ class MainWindow(ctk.CTk):
             api_client=self.api_client,
             on_toggle_theme=self._on_accessibility_change,
             on_toggle_sidebar=self.toggle_sidebar,
-            on_search=self._handle_global_search
+            on_search=self._handle_global_search,
+            on_logout=self._handle_logout
         )
         self.top_header.grid(row=0, column=0, sticky="ew")
 
@@ -229,6 +276,77 @@ class MainWindow(ctk.CTk):
         self.view_container.grid(row=1, column=0, sticky="nsew")
         self.view_container.grid_rowconfigure(0, weight=1)
         self.view_container.grid_columnconfigure(0, weight=1)
+
+    def _rebuild_nav_buttons(self):
+        for widget in self.nav_scroll.winfo_children():
+            widget.destroy()
+        self.nav_buttons.clear()
+        self.section_headers.clear()
+        self._nav_row_counter = 0
+
+        accent = accessibility_manager.get_accent_color()
+        for key, icon, label, _, _ in self.nav_items:
+            btn_text = icon if self.is_sidebar_collapsed else f"  {icon}   {label}"
+            btn_anchor = "center" if self.is_sidebar_collapsed else "w"
+            btn_font = accessibility_manager.get_font(15 if self.is_sidebar_collapsed else 12)
+            btn = ctk.CTkButton(
+                self.nav_scroll,
+                text=btn_text,
+                height=38,
+                corner_radius=10,
+                anchor=btn_anchor,
+                fg_color=accent if key == self.current_view_key else "transparent",
+                text_color="#FFFFFF" if key == self.current_view_key else Theme.TEXT_MUTED,
+                hover_color=Theme.SECONDARY_HOVER,
+                font=btn_font,
+                command=lambda k=key: self.navigate(k)
+            )
+            btn.grid(row=self._nav_row_counter, column=0, sticky="ew", pady=2, padx=2 if self.is_sidebar_collapsed else 4)
+            self.nav_buttons[key] = btn
+            self._nav_row_counter += 1
+
+    def _on_login_success(self, user_data: Dict[str, Any]):
+        self.current_user = user_data
+        role = str(user_data.get("role", "owner")).lower()
+        self.nav_items = list(self.ROLE_NAV_CONFIGS.get(role, self.ROLE_NAV_CONFIGS["owner"]))
+
+        # Restore sidebar
+        self.sidebar.grid(row=0, column=0, sticky="nsew")
+        new_width = 68 if self.is_sidebar_collapsed else 240
+        self.grid_columnconfigure(0, weight=0, minsize=new_width)
+
+        # Update top header
+        self.top_header.set_user_visible(True)
+        avatar = self.ROLE_ICONS.get(role, "🧑‍⚕️")
+        name = user_data.get("full_name") or user_data.get("username", "Stakeholder")
+        role_label = role.replace("_", " ").title()
+        self.top_header.set_user_info(name, role_label, avatar)
+
+        self._rebuild_nav_buttons()
+
+        # Navigate to first panel
+        first_key = self.nav_items[0][0]
+        self.navigate(first_key)
+
+    def _handle_logout(self):
+        self.current_user = None
+        if hasattr(self.api_client, "token"):
+            self.api_client.token = None
+        self.sidebar.grid_remove()
+        self.grid_columnconfigure(0, weight=0, minsize=0)
+        self.top_header.set_title("MediCare Stakeholder Login", "Select or sign in with your stakeholder account")
+        self.top_header.set_user_visible(False)
+
+        if self.current_view_widget:
+            self.current_view_widget.destroy()
+            self.current_view_widget = None
+
+        self.current_view_widget = LoginView(
+            self.view_container,
+            self.api_client,
+            on_login_success=self._on_login_success
+        )
+        self.current_view_widget.grid(row=0, column=0, sticky="nsew")
 
     def toggle_sidebar(self):
         self.is_sidebar_collapsed = not self.is_sidebar_collapsed
@@ -249,9 +367,10 @@ class MainWindow(ctk.CTk):
 
             # 3. Collapse nav buttons to icon-only centered with prominent icon font
             for key, btn in self.nav_buttons.items():
-                icon = next(item[1] for item in self.nav_items if item[0] == key)
-                btn.configure(text=icon, anchor="center", font=accessibility_manager.get_font(15))
-                btn.grid_configure(padx=2)
+                item = next((it for it in self.nav_items if it[0] == key), None)
+                if item:
+                    btn.configure(text=item[1], anchor="center", font=accessibility_manager.get_font(15))
+                    btn.grid_configure(padx=2)
 
             # 4. Collapse bottom status pill to compact dot
             self.bot_frame.pack_configure(padx=6, pady=8)
@@ -271,9 +390,10 @@ class MainWindow(ctk.CTk):
 
             # 3. Expand nav buttons to full icon + label
             for key, btn in self.nav_buttons.items():
-                meta = next(item for item in self.nav_items if item[0] == key)
-                btn.configure(text=f"  {meta[1]}   {meta[2]}", anchor="w", font=accessibility_manager.get_font(12))
-                btn.grid_configure(padx=4)
+                meta = next((it for it in self.nav_items if it[0] == key), None)
+                if meta:
+                    btn.configure(text=f"  {meta[1]}   {meta[2]}", anchor="w", font=accessibility_manager.get_font(12))
+                    btn.grid_configure(padx=4)
 
             # 4. Expand bottom status pill to full text
             self.bot_frame.pack_configure(padx=12, pady=12)
@@ -314,21 +434,14 @@ class MainWindow(ctk.CTk):
         self.bind_all("<Escape>", lambda e: (self._handle_escape(), "break")[1])
 
         # Page jump hotkeys (Ctrl+1 .. Ctrl+0)
-        nav_map = {
-            "1": "dashboard",
-            "2": "medicines",
-            "3": "categories",
-            "4": "inventory",
-            "5": "sales",
-            "6": "purchases",
-            "7": "suppliers",
-            "8": "customers",
-            "9": "reports",
-            "0": "settings",
-        }
-        for num, view_key in nav_map.items():
+        for num in "1234567890":
             for pat in [f"<Control-Key-{num}>", f"<Control-{num}>", f"<Control-KP_{num}>"]:
-                self.bind_all(pat, lambda e, vk=view_key: (self.navigate(vk), "break")[1])
+                self.bind_all(pat, lambda e, n=num: (self._navigate_by_slot(n), "break")[1])
+
+    def _navigate_by_slot(self, slot: str):
+        idx = 9 if slot == "0" else (int(slot) - 1)
+        if 0 <= idx < len(self.nav_items):
+            self.navigate(self.nav_items[idx][0])
 
     def _is_entry_focused(self) -> bool:
         try:
@@ -367,37 +480,15 @@ class MainWindow(ctk.CTk):
                 self.navigate("users")
                 return "break"
             elif k in "1234567890":
-                mapping = {
-                    "1": "dashboard",
-                    "2": "medicines",
-                    "3": "categories",
-                    "4": "inventory",
-                    "5": "sales",
-                    "6": "purchases",
-                    "7": "suppliers",
-                    "8": "customers",
-                    "9": "reports",
-                    "0": "settings",
-                }
-                if k in mapping:
-                    self.navigate(mapping[k])
-                    return "break"
+                self._navigate_by_slot(k)
+                return "break"
 
         # Keypad numbers with Ctrl
         if is_ctrl and keysym.startswith("KP_"):
             kp_digit = keysym.replace("KP_", "")
-            mapping = {
-                "1": "dashboard",
-                "2": "medicines",
-                "3": "categories",
-                "4": "inventory",
-                "5": "sales",
-                "6": "purchases",
-                "7": "suppliers",
-                "8": "customers",
-                "9": "reports",
-                "0": "settings",
-            }
+            if kp_digit in "1234567890":
+                self._navigate_by_slot(kp_digit)
+                return "break"
             if kp_digit in mapping:
                 self.navigate(mapping[kp_digit])
                 return "break"
@@ -519,7 +610,43 @@ class MainWindow(ctk.CTk):
             self.current_view_widget.destroy()
 
         # Instantiate new view
-        if key == "dashboard":
+        if key == "super_admin":
+            self.current_view_widget = SuperAdminView(
+                self.view_container,
+                self.api_client
+            )
+        elif key == "owner":
+            self.current_view_widget = OwnerView(
+                self.view_container,
+                self.api_client,
+                on_navigate=self.navigate
+            )
+        elif key == "pharmacist":
+            self.current_view_widget = PharmacistView(
+                self.view_container,
+                self.api_client
+            )
+        elif key == "cashier":
+            self.current_view_widget = CashierView(
+                self.view_container,
+                self.api_client
+            )
+        elif key == "inventory_manager":
+            self.current_view_widget = InventoryManagerView(
+                self.view_container,
+                self.api_client
+            )
+        elif key == "supplier":
+            self.current_view_widget = SupplierPortalView(
+                self.view_container,
+                self.api_client
+            )
+        elif key == "customer":
+            self.current_view_widget = CustomerPortalView(
+                self.view_container,
+                self.api_client
+            )
+        elif key == "dashboard":
             self.current_view_widget = DashboardView(
                 self.view_container,
                 self.api_client,

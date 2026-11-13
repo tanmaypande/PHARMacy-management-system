@@ -105,6 +105,10 @@ class Medicine(Base):
         default="Tablets",
         doc="Unit form (e.g., Tablets, Capsules, Syrup, Strip, Bottle, Ampoule)"
     )
+
+    @property
+    def unit(self) -> str:
+        return self.unit_of_measurement
     reorder_level: Mapped[int] = mapped_column(
         Integer,
         nullable=False,

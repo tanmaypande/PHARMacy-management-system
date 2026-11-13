@@ -25,6 +25,10 @@ class DataTable(ctk.CTkFrame):
         page_size: int = 10,
         rows_per_page: Optional[int] = None,
         actions: Optional[List[Dict[str, Any]]] = None,
+        action_button_text: Optional[str] = None,
+        on_action_click: Optional[Callable[[Dict[str, Any]], None]] = None,
+        on_row_select: Optional[Callable[[Dict[str, Any]], None]] = None,
+        on_row_click: Optional[Callable[[Dict[str, Any]], None]] = None,
         empty_title: str = "No Records Found",
         empty_desc: str = "There are no records matching the current criteria.",
         **kwargs
@@ -37,7 +41,13 @@ class DataTable(ctk.CTkFrame):
         self.current_page = 1
         self.sort_key: Optional[str] = None
         self.sort_ascending: bool = True
-        self.actions = actions or []
+        self.actions = list(actions) if actions else []
+        if action_button_text and on_action_click:
+            self.actions.append({
+                "label": action_button_text,
+                "command": on_action_click,
+            })
+        self.on_row_select = on_row_select or on_row_click
         self.empty_title = empty_title
         self.empty_desc = empty_desc
 
@@ -244,6 +254,9 @@ class DataTable(ctk.CTkFrame):
 
             row_frame = ctk.CTkFrame(self.body_scroll, fg_color=bg_col, corner_radius=6, height=36)
             row_frame.pack(fill="x", pady=1)
+
+            if self.on_row_select:
+                row_frame.bind("<Button-1>", lambda e, r=row_data: self.on_row_select(r))
 
             for i in range(col_count):
                 weight = self.columns[i].get("weight", 1) if i < len(self.columns) else 1

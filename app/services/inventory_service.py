@@ -145,3 +145,88 @@ class InventoryService:
             expiring_soon_batches=expiring_soon,
             expired_batches=expired
         )
+
+    def adjust_stock(
+        self,
+        batch_id: uuid.UUID,
+        new_quantity: int,
+        reason: str,
+        performed_by: str = "inventory",
+        pharmacy_id: Optional[uuid.UUID] = None
+    ) -> dict:
+        if new_quantity < 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="TQM Error Prevention: Stock quantity cannot be negative."
+            )
+
+        batch = self.repo.get_by_id(batch_id)
+        if not batch:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Batch with ID '{batch_id}' was not found"
+            )
+
+        old_qty = batch.current_stock
+        diff = new_quantity - old_qty
+        batch.current_stock = new_quantity
+        self.db.commit()
+
+        # Record movement
+        from app.repositories.stock_movement_repository import StockMovementRepository
+        from app.repositories.audit_repository import AuditRepository
+        stock_repo = StockMovementRepository(self.db)
+        audit_repo = AuditRepository(self.db)
+
+        movement = stock_repo.record_movement(
+            batch_id=batch.id,
+            movement_type="ADJUSTMENT",
+            quantity_change=diff,
+            balance_after=new_quantity,
+            reason=reason.strip(),
+            performed_by=performed_by,
+            pharmacy_id=pharmacy_id
+        )
+
+        audit_repo.log_action(
+            performed_by,
+            "ADJUST_STOCK",
+            "MedicineBatch",
+            str(batch.id),
+            f"Physical adjustment on batch {batch.batch_number}: {old_qty} -> {new_quantity}. Reason: {reason}"
+        )
+
+        return {
+            "batch_id": str(batch.id),
+            "batch_number": batch.batch_number,
+            "previous_stock": old_qty,
+            "new_stock": batch.current_stock,
+            "movement_id": str(movement.id)
+        }
+
+    def list_movements(
+        self,
+        pharmacy_id: Optional[uuid.UUID] = None,
+        batch_id: Optional[uuid.UUID] = None,
+        limit: int = 100
+    ) -> List[dict]:
+        from app.repositories.stock_movement_repository import StockMovementRepository
+        stock_repo = StockMovementRepository(self.db)
+        movements = stock_repo.list_movements(pharmacy_id=pharmacy_id, batch_id=batch_id, limit=limit)
+        result = []
+        for m in movements:
+            batch = self.repo.get_by_id(m.batch_id)
+            med_name = batch.medicine.name if batch and batch.medicine else "Medicine Batch"
+            batch_num = batch.batch_number if batch else "LOT"
+            result.append({
+                "id": str(m.id),
+                "timestamp": m.created_at.strftime("%Y-%m-%d %H:%M"),
+                "medicine_name": med_name,
+                "batch_number": batch_num,
+                "movement_type": m.movement_type,
+                "quantity_change": m.quantity_change,
+                "balance_after": m.balance_after,
+                "reason": m.reason,
+                "performed_by": m.performed_by
+            })
+        return result

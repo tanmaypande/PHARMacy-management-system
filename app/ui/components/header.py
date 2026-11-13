@@ -25,6 +25,7 @@ class TopHeader(ctk.CTkFrame):
         on_toggle_theme=None,
         on_toggle_sidebar=None,
         on_search=None,
+        on_logout=None,
         **kwargs
     ):
         super().__init__(
@@ -39,6 +40,7 @@ class TopHeader(ctk.CTkFrame):
         self.on_toggle_theme = on_toggle_theme
         self.on_toggle_sidebar = on_toggle_sidebar
         self.on_search = on_search
+        self.on_logout = on_logout
         self.current_alerts = []
 
         self.pack_propagate(False)
@@ -186,37 +188,76 @@ class TopHeader(ctk.CTkFrame):
         self.btn_shortcuts.pack(side="left", padx=(0, 12))
 
         # 6. User Profile Card
-        user_card = ctk.CTkFrame(
+        self.user_card = ctk.CTkFrame(
             right_box,
             fg_color=Theme.BG_MUTED,
             corner_radius=8,
             height=36
         )
-        user_card.pack(side="left")
+        self.user_card.pack(side="left")
 
-        avatar_box = ctk.CTkLabel(
-            user_card,
+        self.lbl_avatar = ctk.CTkLabel(
+            self.user_card,
             text="🧑‍⚕️",
             font=accessibility_manager.get_font(15)
         )
-        avatar_box.pack(side="left", padx=(8, 4), pady=4)
+        self.lbl_avatar.pack(side="left", padx=(8, 4), pady=4)
 
-        user_info = ctk.CTkFrame(user_card, fg_color="transparent")
+        user_info = ctk.CTkFrame(self.user_card, fg_color="transparent")
         user_info.pack(side="left", padx=(2, 10), pady=4)
 
-        ctk.CTkLabel(
+        self.lbl_user_name = ctk.CTkLabel(
             user_info,
             text="Dr. Pharmacist",
             font=accessibility_manager.get_font(11, weight="bold"),
             text_color=Theme.TEXT_MAIN
-        ).pack(anchor="w")
+        )
+        self.lbl_user_name.pack(anchor="w")
 
-        ctk.CTkLabel(
+        self.lbl_user_role = ctk.CTkLabel(
             user_info,
             text="Admin Staff",
             font=accessibility_manager.get_font(10),
             text_color=Theme.TEXT_MUTED
-        ).pack(anchor="w")
+        )
+        self.lbl_user_role.pack(anchor="w")
+
+        # 7. Logout Button
+        if self.on_logout:
+            self.btn_logout = ctk.CTkButton(
+                right_box,
+                text="🚪 Logout",
+                width=78,
+                height=34,
+                corner_radius=8,
+                fg_color=Theme.DANGER_BG,
+                hover_color=Theme.DANGER_HOVER,
+                text_color=Theme.DANGER_TEXT,
+                font=accessibility_manager.get_font(11, weight="bold"),
+                cursor="hand2",
+                command=self.on_logout
+            )
+            self.btn_logout.pack(side="left", padx=(8, 0))
+
+    def set_user_info(self, name: str, role_title: str, avatar_icon: str = "🧑‍⚕️"):
+        if hasattr(self, "lbl_avatar"):
+            self.lbl_avatar.configure(text=avatar_icon)
+        if hasattr(self, "lbl_user_name"):
+            self.lbl_user_name.configure(text=name)
+        if hasattr(self, "lbl_user_role"):
+            self.lbl_user_role.configure(text=role_title)
+
+    def set_user_visible(self, visible: bool):
+        if hasattr(self, "user_card"):
+            if visible:
+                self.user_card.pack(side="left")
+            else:
+                self.user_card.pack_forget()
+        if hasattr(self, "btn_logout"):
+            if visible:
+                self.btn_logout.pack(side="left", padx=(8, 0))
+            else:
+                self.btn_logout.pack_forget()
 
     def set_title(self, title: str, subtitle: str):
         self.lbl_title.configure(text=title)

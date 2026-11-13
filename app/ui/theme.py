@@ -63,6 +63,8 @@ class Theme:
 
     DANGER_BG = ("#FEE2E2", "#7F1D1D")         # Soft coral red
     DANGER_TEXT = ("#B91C1C", "#FCA5A5")
+    DANGER = ("#DC2626", "#EF4444")
+    DANGER_HOVER = ("#B91C1C", "#DC2626")
 
     INFO_BG = ("#E0F2FE", "#0C4A6E")           # Soft sky blue
     INFO_TEXT = ("#0284C7", "#38BDF8")

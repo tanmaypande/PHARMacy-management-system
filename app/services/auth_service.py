@@ -55,19 +55,54 @@ class AuthService:
             "username": user.username,
             "full_name": user.full_name,
             "role": user.role,
+            "pharmacy_id": str(user.pharmacy_id) if user.pharmacy_id else None,
+            "supplier_id": str(user.supplier_id) if user.supplier_id else None,
+            "customer_id": str(user.customer_id) if user.customer_id else None,
+            "email": user.email,
+            "phone": user.phone,
             "is_active": user.is_active
         }
 
-    def create_user(self, username: str, password: str, full_name: str, role: str, actor_username: str = "system") -> Dict[str, Any]:
+    def reset_password(self, username: str, new_password: str, actor_username: str = "system") -> Dict[str, Any]:
+        user = self.user_repo.get_by_username(username.strip())
+        if not user:
+            raise ValueError(f"User '{username}' was not found.")
+        user.hashed_password = hash_password(new_password)
+        self.user_repo.update(user)
+        self.audit_repo.log_action(actor_username, "RESET_PASSWORD", "User", str(user.id), f"Password reset for {user.username}")
+        return {"id": str(user.id), "username": user.username, "message": "Password updated successfully."}
+
+    def create_user(
+        self,
+        username: str,
+        password: str,
+        full_name: str,
+        role: str,
+        pharmacy_id: Optional[str] = None,
+        supplier_id: Optional[str] = None,
+        customer_id: Optional[str] = None,
+        email: Optional[str] = None,
+        phone: Optional[str] = None,
+        actor_username: str = "system"
+    ) -> Dict[str, Any]:
         existing = self.user_repo.get_by_username(username.strip())
         if existing:
             raise ValueError(f"Username '{username}' already exists.")
+
+        p_id = uuid.UUID(pharmacy_id) if pharmacy_id else None
+        s_id = uuid.UUID(supplier_id) if supplier_id else None
+        c_id = uuid.UUID(customer_id) if customer_id else None
 
         user = User(
             username=username.strip(),
             hashed_password=hash_password(password),
             full_name=full_name.strip(),
             role=role.strip().lower(),
+            pharmacy_id=p_id,
+            supplier_id=s_id,
+            customer_id=c_id,
+            email=email.strip() if email else None,
+            phone=phone.strip() if phone else None,
             is_active=True
         )
         created = self.user_repo.create(user)

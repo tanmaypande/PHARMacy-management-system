@@ -15,11 +15,28 @@ from app.api.routes.prescriptions import router as prescriptions_router
 from app.api.routes.reports import router as reports_router
 from app.api.routes.tqm import router as tqm_router
 from app.api.routes.policies import router as policies_router
+from app.api.routes.super_admin import router as super_admin_router
+from app.api.routes.owner import router as owner_router
+from app.api.routes.pharmacist import router as pharmacist_router
+from app.api.routes.purchase_orders import router as purchase_orders_router
+from app.api.routes.supplier_portal import router as supplier_portal_router
+from app.api.routes.customer_portal import router as customer_portal_router
+from app.core.db_migration import init_db_and_seed
+from contextlib import asynccontextmanager
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Ensure all tables and seed data exist
+    init_db_and_seed()
+    yield
+
 
 app = FastAPI(
     title="Pharmacy Management System API",
-    description="Backend API with TQM Error Prevention and Q12 Accessibility Standards",
-    version="1.0.0"
+    description="Multi-Stakeholder Pharmacy SaaS API with TQM Error Prevention and Q12 Accessibility Standards",
+    version="2.0.0",
+    lifespan=lifespan
 )
 
 # Register Domain Routers
@@ -36,6 +53,12 @@ app.include_router(prescriptions_router)
 app.include_router(reports_router)
 app.include_router(tqm_router)
 app.include_router(policies_router)
+app.include_router(super_admin_router)
+app.include_router(owner_router)
+app.include_router(pharmacist_router)
+app.include_router(purchase_orders_router)
+app.include_router(supplier_portal_router)
+app.include_router(customer_portal_router)
 
 
 @app.get("/health", tags=["Health & Monitoring"])

@@ -1,18 +1,23 @@
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
-from sqlalchemy import String, Boolean, DateTime, Text, Enum
+from sqlalchemy import String, Boolean, DateTime, Text, Enum, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 from app.core.database import Base
 
 
 class User(Base):
     """
-    System user with Role-Based Access Control (RBAC).
-    Roles:
-      - 'admin': Full administrative and system control
-      - 'pharmacist': Formulary, batches, purchases, dispensing
-      - 'cashier': POS Billing, sales inquiry only
+    Multi-stakeholder user with Role-Based Access Control (RBAC).
+    Supported Roles:
+      - 'super_admin': SaaS Platform owner & multi-pharmacy regulator
+      - 'owner': Pharmacy Proprietor (full control of single pharmacy)
+      - 'pharmacist': Clinical prescription verification & dispensing safety
+      - 'cashier': POS billing, counter cashiering & returns
+      - 'inventory_manager': Stock batches, purchase orders, goods receiving
+      - 'supplier': Wholesale vendor portal (quotations & PO fulfillment)
+      - 'customer': Patient portal (catalog, prescription upload, billing history)
+      - 'admin': Legacy administrative alias mapped to owner
     """
     __tablename__ = "users"
 
@@ -31,18 +36,47 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
-        doc="Bcrypt hashed password"
+        doc="Bcrypt/SHA256 hashed password"
     )
     full_name: Mapped[str] = mapped_column(
         String(100),
         nullable=False,
-        doc="Full display name of employee"
+        doc="Full display name of employee or stakeholder"
     )
     role: Mapped[str] = mapped_column(
-        String(20),
+        String(30),
         nullable=False,
         default="cashier",
-        doc="RBAC role: admin, pharmacist, or cashier"
+        index=True,
+        doc="RBAC role: super_admin, owner, pharmacist, cashier, inventory_manager, supplier, customer, admin"
+    )
+    pharmacy_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("pharmacies.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+        doc="Tenant link to specific pharmacy"
+    )
+    supplier_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("suppliers.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+        doc="Linked vendor profile if role is supplier"
+    )
+    customer_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("customers.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+        doc="Linked patient profile if role is customer"
+    )
+    email: Mapped[Optional[str]] = mapped_column(
+        String(100),
+        nullable=True,
+        doc="Email address for correspondence"
+    )
+    phone: Mapped[Optional[str]] = mapped_column(
+        String(25),
+        nullable=True,
+        doc="Phone number"
     )
     is_active: Mapped[bool] = mapped_column(
         Boolean,
@@ -96,6 +130,11 @@ class AuditLog(Base):
     entity_id: Mapped[Optional[str]] = mapped_column(
         String(100),
         nullable=True
+    )
+    pharmacy_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("pharmacies.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True
     )
     details: Mapped[Optional[str]] = mapped_column(
         Text,

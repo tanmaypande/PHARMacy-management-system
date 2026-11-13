@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 from typing import Optional, List, TYPE_CHECKING
-from sqlalchemy import String, Text, DateTime
+from sqlalchemy import String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
@@ -19,6 +19,11 @@ class Customer(Base):
         primary_key=True,
         default=uuid.uuid4,
         doc="Unique identifier for the customer"
+    )
+    pharmacy_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("pharmacies.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True
     )
     name: Mapped[str] = mapped_column(
         String(150),

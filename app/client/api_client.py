@@ -371,4 +371,263 @@ class APIClient:
         res = requests.delete(url, headers=self._headers(), timeout=self.timeout)
         return self._handle_response(res)
 
+    # ================= 1. Super Admin Panel Client =================
+    def get_super_admin_dashboard(self) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/super-admin/dashboard"
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def list_pharmacies(self) -> List[Dict[str, Any]]:
+        url = f"{self.base_url}/api/v1/super-admin/pharmacies"
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def register_pharmacy(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/super-admin/pharmacies"
+        res = requests.post(url, json=payload, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def toggle_pharmacy_status(self, pharmacy_id: str) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/super-admin/pharmacies/{pharmacy_id}/toggle-status"
+        res = requests.put(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def list_subscriptions(self) -> List[Dict[str, Any]]:
+        url = f"{self.base_url}/api/v1/super-admin/subscriptions"
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def list_support_tickets(self, status: Optional[str] = None) -> List[Dict[str, Any]]:
+        url = f"{self.base_url}/api/v1/super-admin/support-tickets"
+        if status and status != "All":
+            url += f"?status={status}"
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def reply_support_ticket(self, ticket_id: str, response: str, status: str = "Resolved") -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/super-admin/support-tickets/{ticket_id}/reply"
+        res = requests.put(url, json={"response": response, "status": status}, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def get_super_admin_audit_logs(self, limit: int = 100) -> List[Dict[str, Any]]:
+        url = f"{self.base_url}/api/v1/super-admin/audit-logs?limit={limit}"
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    # ================= 2. Pharmacy Owner Panel Client =================
+    def get_owner_dashboard(self, pharmacy_id: Optional[str] = None) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/owner/dashboard"
+        if pharmacy_id:
+            url += f"?pharmacy_id={pharmacy_id}"
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def list_expenses(self, pharmacy_id: Optional[str] = None, category: Optional[str] = None) -> List[Dict[str, Any]]:
+        url = f"{self.base_url}/api/v1/owner/expenses"
+        params = []
+        if pharmacy_id:
+            params.append(f"pharmacy_id={pharmacy_id}")
+        if category and category != "All":
+            params.append(f"category={category}")
+        if params:
+            url += "?" + "&".join(params)
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def add_expense(self, category: str, amount: float, description: str, pharmacy_id: Optional[str] = None) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/owner/expenses"
+        payload = {"category": category, "amount": amount, "description": description, "pharmacy_id": pharmacy_id}
+        res = requests.post(url, json=payload, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def delete_expense(self, expense_id: str) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/owner/expenses/{expense_id}"
+        res = requests.delete(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def get_profit_and_loss(self, pharmacy_id: Optional[str] = None) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/owner/profit-loss"
+        if pharmacy_id:
+            url += f"?pharmacy_id={pharmacy_id}"
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def get_pharmacy_profile(self, pharmacy_id: Optional[str] = None) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/owner/profile"
+        if pharmacy_id:
+            url += f"?pharmacy_id={pharmacy_id}"
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def update_pharmacy_profile(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/owner/profile"
+        res = requests.put(url, json=payload, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    # ================= 3. Pharmacist Panel Client =================
+    def get_pharmacist_dashboard(self, pharmacy_id: Optional[str] = None) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/pharmacist/dashboard"
+        if pharmacy_id:
+            url += f"?pharmacy_id={pharmacy_id}"
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def list_pharmacist_prescriptions(self, pharmacy_id: Optional[str] = None, status: Optional[str] = None) -> List[Dict[str, Any]]:
+        url = f"{self.base_url}/api/v1/pharmacist/prescriptions"
+        params = []
+        if pharmacy_id:
+            params.append(f"pharmacy_id={pharmacy_id}")
+        if status and status != "All":
+            params.append(f"status={status}")
+        if params:
+            url += "?" + "&".join(params)
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def verify_prescription(self, prescription_id: str, dispensing_notes: str) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/pharmacist/prescriptions/{prescription_id}/verify"
+        res = requests.post(url, json={"dispensing_notes": dispensing_notes}, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def reject_prescription(self, prescription_id: str, reason: str) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/pharmacist/prescriptions/{prescription_id}/reject"
+        res = requests.post(url, json={"reason": reason}, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def dispense_prescription(self, prescription_id: str) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/pharmacist/prescriptions/{prescription_id}/dispense"
+        res = requests.post(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def get_patient_medication_history(self, customer_id: str) -> List[Dict[str, Any]]:
+        url = f"{self.base_url}/api/v1/pharmacist/patient-history/{customer_id}"
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    # ================= 4 & 5. Purchase Orders & Inventory =================
+    def list_purchase_orders(self, pharmacy_id: Optional[str] = None, supplier_id: Optional[str] = None, status: Optional[str] = None) -> List[Dict[str, Any]]:
+        url = f"{self.base_url}/api/v1/purchase-orders"
+        params = []
+        if pharmacy_id:
+            params.append(f"pharmacy_id={pharmacy_id}")
+        if supplier_id:
+            params.append(f"supplier_id={supplier_id}")
+        if status and status != "All":
+            params.append(f"status={status}")
+        if params:
+            url += "?" + "&".join(params)
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def create_purchase_order(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/purchase-orders"
+        res = requests.post(url, json=payload, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def get_purchase_order_details(self, po_id: str) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/purchase-orders/{po_id}"
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def receive_purchase_order_goods(self, po_id: str, batches: List[Dict[str, Any]]) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/purchase-orders/{po_id}/receive"
+        res = requests.post(url, json={"batches": batches}, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def adjust_inventory_stock(self, batch_id: str, new_quantity: int, reason: str, pharmacy_id: Optional[str] = None) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/purchase-orders/inventory/adjust"
+        payload = {"batch_id": batch_id, "new_quantity": new_quantity, "reason": reason, "pharmacy_id": pharmacy_id}
+        res = requests.post(url, json=payload, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def list_stock_movements(self, pharmacy_id: Optional[str] = None, batch_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        url = f"{self.base_url}/api/v1/purchase-orders/inventory/movements"
+        params = []
+        if pharmacy_id:
+            params.append(f"pharmacy_id={pharmacy_id}")
+        if batch_id:
+            params.append(f"batch_id={batch_id}")
+        if params:
+            url += "?" + "&".join(params)
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    # ================= 6. Supplier Portal Client =================
+    def get_supplier_portal_dashboard(self, supplier_id: Optional[str] = None) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/supplier-portal/dashboard"
+        if supplier_id:
+            url += f"?supplier_id={supplier_id}"
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def list_supplier_portal_orders(self, supplier_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        url = f"{self.base_url}/api/v1/supplier-portal/orders"
+        if supplier_id:
+            url += f"?supplier_id={supplier_id}"
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def respond_supplier_order(self, po_id: str, status: str, quotation_notes: str = "") -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/supplier-portal/orders/{po_id}/respond"
+        res = requests.post(url, json={"status": status, "quotation_notes": quotation_notes}, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def get_supplier_catalog(self, supplier_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        url = f"{self.base_url}/api/v1/supplier-portal/catalog"
+        if supplier_id:
+            url += f"?supplier_id={supplier_id}"
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def get_supplier_payment_ledger(self, supplier_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        url = f"{self.base_url}/api/v1/supplier-portal/payments"
+        if supplier_id:
+            url += f"?supplier_id={supplier_id}"
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    # ================= 7. Customer / Patient Portal Client =================
+    def register_patient_account(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/customer-portal/register"
+        res = requests.post(url, json=payload, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def get_customer_dashboard(self, customer_id: Optional[str] = None) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/customer-portal/dashboard"
+        if customer_id:
+            url += f"?customer_id={customer_id}"
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def get_customer_catalog(self, search: Optional[str] = None) -> List[Dict[str, Any]]:
+        url = f"{self.base_url}/api/v1/customer-portal/catalog"
+        if search:
+            url += f"?search={requests.utils.quote(search)}"
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def upload_patient_prescription(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/customer-portal/prescriptions"
+        res = requests.post(url, json=payload, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def list_my_prescriptions(self, customer_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        url = f"{self.base_url}/api/v1/customer-portal/prescriptions"
+        if customer_id:
+            url += f"?customer_id={customer_id}"
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def list_my_orders(self, customer_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        url = f"{self.base_url}/api/v1/customer-portal/orders"
+        if customer_id:
+            url += f"?customer_id={customer_id}"
+        res = requests.get(url, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
+    def submit_customer_support_ticket(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        url = f"{self.base_url}/api/v1/customer-portal/support"
+        res = requests.post(url, json=payload, headers=self._headers(), timeout=self.timeout)
+        return self._handle_response(res)
+
 
